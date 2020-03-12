@@ -71,16 +71,14 @@ func (s Store) List() ([]*proto.Record, error) {
 
 // Read implements the store interface. This implementation only reads by id.
 func (s Store) Read(key string) (*proto.Record, error) {
+	record := proto.Record{}
 	contents, err := ioutil.ReadFile(path.Join(s.mountPath, key))
 	if err != nil {
 		s.Logger.Err(err).Msgf("error reading contents of key %v: file not found", key)
-		return nil, err
 	}
 
-	record := proto.Record{}
 	if err = json.Unmarshal(contents, &record); err != nil {
 		s.Logger.Err(err).Msg("error unmarshaling record")
-		return nil, err
 	}
 
 	return &record, nil
