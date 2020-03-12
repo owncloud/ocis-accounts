@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 
-	// gproto "github.com/golang/protobuf/proto"
 	"github.com/owncloud/ocis-accounts/pkg/account"
 	"github.com/owncloud/ocis-accounts/pkg/config"
 	"github.com/owncloud/ocis-accounts/pkg/proto/v0"
