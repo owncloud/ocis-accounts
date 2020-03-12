@@ -54,16 +54,16 @@ func New(cfg *config.Config) account.Manager {
 func (s Store) List() ([]*proto.Record, error) {
 	records := []*proto.Record{}
 	identities, err := ioutil.ReadDir(s.mountPath)
+
 	if err != nil {
 		s.Logger.Err(err).Msgf("error reading %v", s.mountPath)
-		return nil, err
-	}
-
-	s.Logger.Info().Msg("listing identities")
-	for _, v := range identities {
-		records = append(records, &proto.Record{
-			Key: v.Name(),
-		})
+	} else {
+		s.Logger.Info().Msg("listing identities")
+		for _, v := range identities {
+			records = append(records, &proto.Record{
+				Key: v.Name(),
+			})
+		}
 	}
 
 	return records, nil
