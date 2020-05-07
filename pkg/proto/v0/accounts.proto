@@ -25,6 +25,8 @@ message Payload {
 message Account {
     StandardClaims standard_claims = 1;
     repeated IdHistory identities = 2; // keep track of every identity of a given user
+    string Issuer = 3;
+    string Password = 4;
 }
 
 // OIDC standard claims https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
