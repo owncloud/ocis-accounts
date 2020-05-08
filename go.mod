@@ -15,10 +15,14 @@ require (
 	github.com/oklog/run v1.1.0
 	github.com/owncloud/ocis-pkg/v2 v2.2.1
 	github.com/restic/calens v0.2.0
+	github.com/rs/zerolog v1.17.2
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/viper v1.6.3
+	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59
 	google.golang.org/genproto v0.0.0-20200430143042-b979b6f78d84
 	google.golang.org/protobuf v1.22.0
+	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
+	gopkg.in/ldap.v2 v2.5.1
 	honnef.co/go/tools v0.0.1-2020.1.0.20200427215036-cd1ad299aeab // indirect
 )
 
