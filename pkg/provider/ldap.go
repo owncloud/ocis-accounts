@@ -98,19 +98,23 @@ func BuildLDAPFilter(r *godata.GoDataFilterQuery, c *config.LDAPSchema) (string,
 func recursiveBuildFilter(n *godata.ParseNode, c *config.LDAPSchema) (string, error) {
 	if n.Token.Type == godata.FilterTokenLiteral {
 		switch n.Token.Value {
-		case "accountid":
+		case "id":
 			return c.AccountID, nil
 		case "displayname":
 			return c.DisplayName, nil
 		case "username":
 			return c.Username, nil
+		// password
+		case "uid":
+			return c.UID, nil
+		case "gid":
+			return c.GID, nil
 		case "mail":
 			return c.Mail, nil
-		case "groups":
-			// TODO groups
-			return "", godata.NotImplementedError(n.Token.Value + " is not implemented.")
-		case "identities":
-			// TODO identities
+		case "description":
+			return c.Description, nil
+		case "memberof":
+			// TODO memberof
 			return "", godata.NotImplementedError(n.Token.Value + " is not implemented.")
 		}
 		return "", godata.BadRequestError("unknown property " + n.Token.Value)

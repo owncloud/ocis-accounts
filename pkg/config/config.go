@@ -17,10 +17,12 @@ type LDAP struct {
 // LDAPSchema defines the available ldap schema configuration.
 type LDAPSchema struct {
 	AccountID   string
-	Identities  string
 	Username    string
+	UID         string
+	GID         string
 	DisplayName string
 	Mail        string
+	Description string
 	Groups      string
 }
 

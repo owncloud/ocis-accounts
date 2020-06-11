@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/empty"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	field_mask "google.golang.org/genproto/protobuf/field_mask"
 	math "math"
@@ -26,7 +25,7 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type ListAccountsRequest struct {
 	// Optional. The maximum number of accounts to return in the response
-	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageSize uint32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional. A pagination token returned from a previous call to `Get`
 	// that indicates from where search should continue
 	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
@@ -84,7 +83,7 @@ func (m *ListAccountsRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ListAccountsRequest proto.InternalMessageInfo
 
-func (m *ListAccountsRequest) GetPageSize() int32 {
+func (m *ListAccountsRequest) GetPageSize() uint32 {
 	if m != nil {
 		return m.PageSize
 	}
@@ -165,10 +164,13 @@ func (m *ListAccountsResponse) GetNextPageToken() string {
 }
 
 type GetAccountRequest struct {
-	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional. Used to specify a subset of fields that should be
+	// returned by a get operation or modified by an update operation.
+	FieldMask            *field_mask.FieldMask `protobuf:"bytes,2,opt,name=field_mask,json=fieldMask,proto3" json:"field_mask,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *GetAccountRequest) Reset()         { *m = GetAccountRequest{} }
@@ -201,6 +203,13 @@ func (m *GetAccountRequest) GetId() string {
 		return m.Id
 	}
 	return ""
+}
+
+func (m *GetAccountRequest) GetFieldMask() *field_mask.FieldMask {
+	if m != nil {
+		return m.FieldMask
+	}
+	return nil
 }
 
 type CreateAccountRequest struct {
@@ -341,108 +350,51 @@ func (m *DeleteAccountRequest) GetId() string {
 	return ""
 }
 
-// Account follows the properties of the ms graph api user resuorce.
-// See https://docs.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties
 type Account struct {
-	// The unique identifier for the user. Key. Not nullable. Non reassignable. Read-only.
+	// The unique identifier for the account.
+	// Key. Not nullable. Non reassignable. Read-only.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// *true* if the account is enabled; otherwise, *false*. This property is required when a user is created. Supports $filter.
-	AccountEnabled bool `protobuf:"varint,2,opt,name=account_enabled,json=accountEnabled,proto3" json:"account_enabled,omitempty"`
-	// A resource account is also known as a /disabled user object/ in Azure AD, and can be used to represent resources in general.
-	// In Exchange it might be used to represent conference rooms, for example, and allow them to have a phone number.
-	// You could give printers or machines with a sync client resource accounts as well.
-	// A resource account can be homed in Microsoft 365 or on premises using Skype for Business Server 2019.
-	// *true* if the user is a resource account; otherwise, *false*. Null value should be considered false.
-	IsResourceAccount bool `protobuf:"varint,3,opt,name=is_resource_account,json=isResourceAccount,proto3" json:"is_resource_account,omitempty"`
-	// Indicates whether the account was created as
-	// - a regular school or work account ("" / emptystring),
-	// - a local account, fully managed by ocis (LocalAccount), includes synced accounts or
-	// - an external account (Invitation),
-	// - self-service sign-up using email verification (EmailVerified). Read-only.
-	CreationType string `protobuf:"bytes,4,opt,name=creation_type,json=creationType,proto3" json:"creation_type,omitempty"`
-	// Represents the identities that can be used to sign in to this account.
-	// An identity can be provided by OCIS (also known as a local account), by organizations, or by social identity providers such as Facebook, Google, and Microsoft, and is tied to an account.
-	// May contain multiple items with the same signInType value. Supports $filter.
-	Identities []*Identities `protobuf:"bytes,5,rep,name=identities,proto3" json:"identities,omitempty"`
-	// The name displayed in the address book for the account.
-	// This is usually the combination of the user's first name, middle initial and last name.
-	// This property is required when a user is created and it cannot be cleared during updates.
-	// Supports $filter and $orderby.
-	// posixaccount MUST cn
-	DisplayName string `protobuf:"bytes,6,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	// The username
-	// posixaccount MUST uid
-	Username string `protobuf:"bytes,7,opt,name=username,proto3" json:"username,omitempty"`
-	// used for exposing the user using ldap
-	// posixaccount MUST uidnumber
-	UidNumber int64 `protobuf:"varint,8,opt,name=uid_number,json=uidNumber,proto3" json:"uid_number,omitempty"`
-	// used for exposing the user using ldap
-	// posixaccount MUST gidnumber
-	GidNumber int64 `protobuf:"varint,9,opt,name=gid_number,json=gidNumber,proto3" json:"gid_number,omitempty"`
-	// The SMTP address for the user, for example, "jeff@contoso.onmicrosoft.com". Read-Only. Supports $filter.
-	// inetorgperson MAY mail
-	Mail string `protobuf:"bytes,10,opt,name=mail,proto3" json:"mail,omitempty"`
+	// The name displayed in places where spaces are allowed.
+	// This is usually the combination of the users's first name, middle initial and last name.
+	// POSIX does not allow whitespace in username, so we use `username` there
+	// Corresponds to LDAP:
+	// - cn
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// The shorthand username, used for login and display in POSIX systems
+	// Corresponds to LDAP:
+	// - posixaccount MUST uid
+	// - (AD) User MAY samaccountname (limited to 20 chars)
+	// Not nullable. Reassignable.
+	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	// Specifies the password for the account.
+	// Corresponds to LDAP:
+	// - posixaccount MAY authPassword
+	// Write-only.
+	Password string `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+	// The numeric user id. Used for exposing the account using ldap to POSIX systems
+	// Corresponds to LDAP:
+	// - posixaccount MUST uidnumber
+	// Not nullable.
+	Uid int64 `protobuf:"varint,5,opt,name=uid,proto3" json:"uid,omitempty"`
+	// The primary group id. Used for exposing the account using ldap to POSIX systems
+	// Corresponds to LDAP:
+	// - posixaccount MUST gidnumber
+	// Not nullable.
+	Gid int64 `protobuf:"varint,6,opt,name=gid,proto3" json:"gid,omitempty"`
+	// The SMTP address for the account, for example, "einstein@example.org".
+	// Corresponds to LDAP:
+	// - inetorgperson MAY mail
+	Mail string `protobuf:"bytes,7,opt,name=mail,proto3" json:"mail,omitempty"`
 	// A description, useful for resource accounts
-	// posixaccount MAY description
-	Description string `protobuf:"bytes,11,opt,name=description,proto3" json:"description,omitempty"`
-	// Specifies the password profile for the user.
-	// The profile contains the user’s password. This property is required when a user is created.
-	// The password in the profile must satisfy minimum requirements as specified by the passwordPolicies property.
-	// By default, a strong password is required.
-	// posixaccount MAY authPassword
-	PasswordProfile *PasswordProfile `protobuf:"bytes,12,opt,name=password_profile,json=passwordProfile,proto3" json:"password_profile,omitempty"`
-	// The groups, directory roles and administrative units that the user is a member of. Read-only. Nullable.
-	// should we only respond with repeated strings of ids? no clients should a proper filter mask!
-	MemberOf []*Group `protobuf:"bytes,13,rep,name=memberOf,proto3" json:"memberOf,omitempty"`
-	// The created date of the account object.
-	CreatedDateTime *timestamp.Timestamp `protobuf:"bytes,16,opt,name=created_date_time,json=createdDateTime,proto3" json:"created_date_time,omitempty"`
-	// The date and time the user was deleted. Returned only on $select.
-	DeletedDateTime *timestamp.Timestamp `protobuf:"bytes,17,opt,name=deleted_date_time,json=deletedDateTime,proto3" json:"deleted_date_time,omitempty"`
-	// *true* if this object is synced from an on-premises directory;
-	// *false* if this object was originally synced from an on-premises directory but is no longer synced;
-	// null if this object has never been synced from an on-premises directory (default). Read-only
-	OnPremisesSyncEnabled bool `protobuf:"varint,20,opt,name=on_premises_sync_enabled,json=onPremisesSyncEnabled,proto3" json:"on_premises_sync_enabled,omitempty"`
-	// This property is used to associate an on-premises LDAP user to the ocis account object.
-	// This property must be specified when creating a new user account in the Graph if you are using a federated domain for the user’s userPrincipalName (UPN) property.
-	// Important: The $ and _ characters cannot be used when specifying this property. Supports $filter.
-	OnPremisesImmutableId string `protobuf:"bytes,21,opt,name=on_premises_immutable_id,json=onPremisesImmutableId,proto3" json:"on_premises_immutable_id,omitempty"`
-	// Contains the on-premises security identifier (SID) for the user that was synchronized from on-premises to the cloud. Read-only.
-	OnPremisesSecurityIdentifier string `protobuf:"bytes,22,opt,name=on_premises_security_identifier,json=onPremisesSecurityIdentifier,proto3" json:"on_premises_security_identifier,omitempty"`
-	// Contains the on-premises LDAP `distinguished name` or `DN`.
-	// The property is only populated for customers who are synchronizing their on-premises directory to ocis-accounts. Read-only.
-	OnPremisesDistinguishedName string `protobuf:"bytes,23,opt,name=on_premises_distinguished_name,json=onPremisesDistinguishedName,proto3" json:"on_premises_distinguished_name,omitempty"`
-	// Contains the on-premises `samAccountName` synchronized from the on-premises directory.
-	// The property is only populated for customers who are synchronizing their on-premises directory to ocis-accounts. Read-only.
-	OnPremisesSamAccountName string `protobuf:"bytes,24,opt,name=on_premises_sam_account_name,json=onPremisesSamAccountName,proto3" json:"on_premises_sam_account_name,omitempty"`
-	// Contains the on-premises `domainFQDN`, also called `dnsDomainName` synchronized from the on-premises directory
-	// The property is only populated for customers who are synchronizing their on-premises directory to ocis-accounts. Read-only.
-	OnPremisesDomainName string `protobuf:"bytes,25,opt,name=on_premises_domain_name,json=onPremisesDomainName,proto3" json:"on_premises_domain_name,omitempty"`
-	// Contains the on-premises userPrincipalName synchronized from the on-premises directory.
-	// The property is only populated for customers who are synchronizing their on-premises directory to ocis-accounts. Read-only.
-	OnPremisesUserPrincipalName string `protobuf:"bytes,26,opt,name=on_premises_user_principal_name,json=onPremisesUserPrincipalName,proto3" json:"on_premises_user_principal_name,omitempty"`
-	// Indicates the last time at which the object was synced with the on-premises directory; Read-only.
-	OnPremisesLastSyncDateTime *timestamp.Timestamp `protobuf:"bytes,28,opt,name=on_premises_last_sync_date_time,json=onPremisesLastSyncDateTime,proto3" json:"on_premises_last_sync_date_time,omitempty"`
-	// Errors when using synchronization during provisioning.
-	OnPremisesProvisioningErrors []*OnPremisesProvisioningError `protobuf:"bytes,29,rep,name=on_premises_provisioning_errors,json=onPremisesProvisioningErrors,proto3" json:"on_premises_provisioning_errors,omitempty"`
-	// For an external user invited to the tenant using the invitation API, this property represents the invited user's invitation status.
-	// For invited users, the state can be `PendingAcceptance` or `Accepted`, or "" / emptystring for all other users.
-	// Returned only on $select. Supports $filter with the supported values. For example: $filter=externalUserState eq 'PendingAcceptance'.
-	ExternalUserState string `protobuf:"bytes,40,opt,name=external_user_state,json=externalUserState,proto3" json:"external_user_state,omitempty"`
-	// Shows the timestamp for the latest change to the externalUserState property. Returned only on $select.
-	ExternalUserStateChangeDateTime *timestamp.Timestamp `protobuf:"bytes,41,opt,name=external_user_state_change_date_time,json=externalUserStateChangeDateTime,proto3" json:"external_user_state_change_date_time,omitempty"`
-	// Any refresh tokens or sessions tokens (session cookies) issued before this time are invalid, and applications will get
-	// an error when using an invalid refresh or sessions token to acquire a delegated access token (to access APIs such as Microsoft Graph).
-	// If this happens, the application will need to acquire a new refresh token by making a request to the authorize endpoint.
-	// Returned only on $select. Read-only. Use invalidateAllRefreshTokens to reset.
-	RefreshTokensValidFromDateTime *timestamp.Timestamp `protobuf:"bytes,60,opt,name=refresh_tokens_valid_from_date_time,json=refreshTokensValidFromDateTime,proto3" json:"refresh_tokens_valid_from_date_time,omitempty"`
-	// Any refresh tokens or sessions tokens (session cookies) issued before this time are invalid, and applications will get
-	// an error when using an invalid refresh or sessions token to acquire a delegated access token (to access APIs such as Microsoft Graph).
-	// If this happens, the application will need to acquire a new refresh token by making a request to the authorize endpoint.
-	// Read-only. Use revokeSignInSessions to reset.
-	SignInSessionsValidFromDateTime *timestamp.Timestamp `protobuf:"bytes,61,opt,name=sign_in_sessions_valid_from_date_time,json=signInSessionsValidFromDateTime,proto3" json:"sign_in_sessions_valid_from_date_time,omitempty"`
-	XXX_NoUnkeyedLiteral            struct{}             `json:"-"`
-	XXX_unrecognized                []byte               `json:"-"`
-	XXX_sizecache                   int32                `json:"-"`
+	// Corresponds to LDAP:
+	// - posixaccount MAY description
+	Description string `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
+	// Corresponds to LDAP:
+	// -
+	MemberOf             []*Group `protobuf:"bytes,9,rep,name=member_of,json=memberOf,proto3" json:"member_of,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *Account) Reset()         { *m = Account{} }
@@ -477,34 +429,6 @@ func (m *Account) GetId() string {
 	return ""
 }
 
-func (m *Account) GetAccountEnabled() bool {
-	if m != nil {
-		return m.AccountEnabled
-	}
-	return false
-}
-
-func (m *Account) GetIsResourceAccount() bool {
-	if m != nil {
-		return m.IsResourceAccount
-	}
-	return false
-}
-
-func (m *Account) GetCreationType() string {
-	if m != nil {
-		return m.CreationType
-	}
-	return ""
-}
-
-func (m *Account) GetIdentities() []*Identities {
-	if m != nil {
-		return m.Identities
-	}
-	return nil
-}
-
 func (m *Account) GetDisplayName() string {
 	if m != nil {
 		return m.DisplayName
@@ -519,16 +443,23 @@ func (m *Account) GetUsername() string {
 	return ""
 }
 
-func (m *Account) GetUidNumber() int64 {
+func (m *Account) GetPassword() string {
 	if m != nil {
-		return m.UidNumber
+		return m.Password
+	}
+	return ""
+}
+
+func (m *Account) GetUid() int64 {
+	if m != nil {
+		return m.Uid
 	}
 	return 0
 }
 
-func (m *Account) GetGidNumber() int64 {
+func (m *Account) GetGid() int64 {
 	if m != nil {
-		return m.GidNumber
+		return m.Gid
 	}
 	return 0
 }
@@ -547,13 +478,6 @@ func (m *Account) GetDescription() string {
 	return ""
 }
 
-func (m *Account) GetPasswordProfile() *PasswordProfile {
-	if m != nil {
-		return m.PasswordProfile
-	}
-	return nil
-}
-
 func (m *Account) GetMemberOf() []*Group {
 	if m != nil {
 		return m.MemberOf
@@ -561,268 +485,9 @@ func (m *Account) GetMemberOf() []*Group {
 	return nil
 }
 
-func (m *Account) GetCreatedDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.CreatedDateTime
-	}
-	return nil
-}
-
-func (m *Account) GetDeletedDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.DeletedDateTime
-	}
-	return nil
-}
-
-func (m *Account) GetOnPremisesSyncEnabled() bool {
-	if m != nil {
-		return m.OnPremisesSyncEnabled
-	}
-	return false
-}
-
-func (m *Account) GetOnPremisesImmutableId() string {
-	if m != nil {
-		return m.OnPremisesImmutableId
-	}
-	return ""
-}
-
-func (m *Account) GetOnPremisesSecurityIdentifier() string {
-	if m != nil {
-		return m.OnPremisesSecurityIdentifier
-	}
-	return ""
-}
-
-func (m *Account) GetOnPremisesDistinguishedName() string {
-	if m != nil {
-		return m.OnPremisesDistinguishedName
-	}
-	return ""
-}
-
-func (m *Account) GetOnPremisesSamAccountName() string {
-	if m != nil {
-		return m.OnPremisesSamAccountName
-	}
-	return ""
-}
-
-func (m *Account) GetOnPremisesDomainName() string {
-	if m != nil {
-		return m.OnPremisesDomainName
-	}
-	return ""
-}
-
-func (m *Account) GetOnPremisesUserPrincipalName() string {
-	if m != nil {
-		return m.OnPremisesUserPrincipalName
-	}
-	return ""
-}
-
-func (m *Account) GetOnPremisesLastSyncDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.OnPremisesLastSyncDateTime
-	}
-	return nil
-}
-
-func (m *Account) GetOnPremisesProvisioningErrors() []*OnPremisesProvisioningError {
-	if m != nil {
-		return m.OnPremisesProvisioningErrors
-	}
-	return nil
-}
-
-func (m *Account) GetExternalUserState() string {
-	if m != nil {
-		return m.ExternalUserState
-	}
-	return ""
-}
-
-func (m *Account) GetExternalUserStateChangeDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.ExternalUserStateChangeDateTime
-	}
-	return nil
-}
-
-func (m *Account) GetRefreshTokensValidFromDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.RefreshTokensValidFromDateTime
-	}
-	return nil
-}
-
-func (m *Account) GetSignInSessionsValidFromDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.SignInSessionsValidFromDateTime
-	}
-	return nil
-}
-
-// Identities Represents an identity used to sign in to a user account.
-// An identity can be provided by ocis, by organizations, or by social identity providers such as Facebook, Google, or Microsoft, that are tied to a user account.
-// This enables the user to sign in to the user account with any of those associated identities.
-// They are also used to keep a history of old usernames.
-type Identities struct {
-	// Specifies the user sign-in types in your directory, such as `emailAddress`, `userName` or `federated`.
-	// Here, federated represents a unique identifier for a user from an issuer, that can be in any format chosen by the issuer.
-	// Additional validation is enforced on *issuer_assigned_id* when the sign-in type is set to `emailAddress` or `userName`.
-	// This property can also be set to any custom string.
-	SignInType string `protobuf:"bytes,1,opt,name=sign_in_type,json=signInType,proto3" json:"sign_in_type,omitempty"`
-	// Specifies the issuer of the identity, for example facebook.com.
-	// For local accounts (where signInType is not federated), this property is
-	// the local B2C tenant default domain name, for example contoso.onmicrosoft.com.
-	// For external users from other Azure AD organization, this will be the domain of
-	// the federated organization, for example contoso.com.
-	// Supports $filter. 512 character limit.
-	Issuer string `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`
-	// Specifies the unique identifier assigned to the user by the issuer. The combination of *issuer* and *issuerAssignedId* must be unique within the organization. Represents the sign-in name for the user, when signInType is set to emailAddress or userName (also known as local accounts).
-	// When *signInType* is set to:
-	// * `emailAddress`, (or starts with `emailAddress` like `emailAddress1`) *issuerAssignedId* must be a valid email address
-	// * `userName`, issuer_assigned_id must be a valid local part of an email address
-	// Supports $filter. 512 character limit.
-	IssuerAssignedId     string   `protobuf:"bytes,3,opt,name=issuer_assigned_id,json=issuerAssignedId,proto3" json:"issuer_assigned_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *Identities) Reset()         { *m = Identities{} }
-func (m *Identities) String() string { return proto.CompactTextString(m) }
-func (*Identities) ProtoMessage()    {}
-func (*Identities) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{7}
-}
-
-func (m *Identities) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Identities.Unmarshal(m, b)
-}
-func (m *Identities) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Identities.Marshal(b, m, deterministic)
-}
-func (m *Identities) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Identities.Merge(m, src)
-}
-func (m *Identities) XXX_Size() int {
-	return xxx_messageInfo_Identities.Size(m)
-}
-func (m *Identities) XXX_DiscardUnknown() {
-	xxx_messageInfo_Identities.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Identities proto.InternalMessageInfo
-
-func (m *Identities) GetSignInType() string {
-	if m != nil {
-		return m.SignInType
-	}
-	return ""
-}
-
-func (m *Identities) GetIssuer() string {
-	if m != nil {
-		return m.Issuer
-	}
-	return ""
-}
-
-func (m *Identities) GetIssuerAssignedId() string {
-	if m != nil {
-		return m.IssuerAssignedId
-	}
-	return ""
-}
-
-type PasswordProfile struct {
-	//	The password for the user. This property is required when a user is created.
-	// It can be updated, but the user will be required to change the password on the next login.
-	// The password must satisfy minimum requirements as specified by the user’s passwordPolicies property. By default, a strong password is required.
-	Password string `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
-	// The time when this account last changed their password.
-	LastPasswordChangeDateTime *timestamp.Timestamp `protobuf:"bytes,2,opt,name=last_password_change_date_time,json=lastPasswordChangeDateTime,proto3" json:"last_password_change_date_time,omitempty"`
-	// Specifies password policies for the user.
-	//This value is an enumeration with one possible value being “DisableStrongPassword”, which allows weaker passwords than the default policy to be specified.
-	// “DisablePasswordExpiration” can also be specified.
-	PasswordPolicies []string `protobuf:"bytes,3,rep,name=password_policies,json=passwordPolicies,proto3" json:"password_policies,omitempty"`
-	// *true* if the user must change her password on the next login; otherwise false.
-	ForceChangePasswordNextSignIn bool `protobuf:"varint,4,opt,name=force_change_password_next_sign_in,json=forceChangePasswordNextSignIn,proto3" json:"force_change_password_next_sign_in,omitempty"`
-	// If *true*, at next sign-in, the user must perform a multi-factor authentication (MFA) before being forced to change their password. The behavior is identical to forceChangePasswordNextSignIn except that the user is required to first perform a multi-factor authentication before password change. After a password change, this property will be automatically reset to false. If not set, default is false.
-	ForceChangePasswordNextSignInWithMfa bool     `protobuf:"varint,5,opt,name=force_change_password_next_sign_in_with_mfa,json=forceChangePasswordNextSignInWithMfa,proto3" json:"force_change_password_next_sign_in_with_mfa,omitempty"`
-	XXX_NoUnkeyedLiteral                 struct{} `json:"-"`
-	XXX_unrecognized                     []byte   `json:"-"`
-	XXX_sizecache                        int32    `json:"-"`
-}
-
-func (m *PasswordProfile) Reset()         { *m = PasswordProfile{} }
-func (m *PasswordProfile) String() string { return proto.CompactTextString(m) }
-func (*PasswordProfile) ProtoMessage()    {}
-func (*PasswordProfile) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{8}
-}
-
-func (m *PasswordProfile) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PasswordProfile.Unmarshal(m, b)
-}
-func (m *PasswordProfile) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PasswordProfile.Marshal(b, m, deterministic)
-}
-func (m *PasswordProfile) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PasswordProfile.Merge(m, src)
-}
-func (m *PasswordProfile) XXX_Size() int {
-	return xxx_messageInfo_PasswordProfile.Size(m)
-}
-func (m *PasswordProfile) XXX_DiscardUnknown() {
-	xxx_messageInfo_PasswordProfile.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PasswordProfile proto.InternalMessageInfo
-
-func (m *PasswordProfile) GetPassword() string {
-	if m != nil {
-		return m.Password
-	}
-	return ""
-}
-
-func (m *PasswordProfile) GetLastPasswordChangeDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.LastPasswordChangeDateTime
-	}
-	return nil
-}
-
-func (m *PasswordProfile) GetPasswordPolicies() []string {
-	if m != nil {
-		return m.PasswordPolicies
-	}
-	return nil
-}
-
-func (m *PasswordProfile) GetForceChangePasswordNextSignIn() bool {
-	if m != nil {
-		return m.ForceChangePasswordNextSignIn
-	}
-	return false
-}
-
-func (m *PasswordProfile) GetForceChangePasswordNextSignInWithMfa() bool {
-	if m != nil {
-		return m.ForceChangePasswordNextSignInWithMfa
-	}
-	return false
-}
-
 type ListGroupsRequest struct {
 	// Optional. The maximum number of groups to return in the response
-	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageSize uint32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional. A pagination token returned from a previous call to `Get`
 	// that indicates from where search should continue
 	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
@@ -857,7 +522,7 @@ func (m *ListGroupsRequest) Reset()         { *m = ListGroupsRequest{} }
 func (m *ListGroupsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListGroupsRequest) ProtoMessage()    {}
 func (*ListGroupsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{9}
+	return fileDescriptor_e1e7723af4c007b7, []int{7}
 }
 
 func (m *ListGroupsRequest) XXX_Unmarshal(b []byte) error {
@@ -878,7 +543,7 @@ func (m *ListGroupsRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ListGroupsRequest proto.InternalMessageInfo
 
-func (m *ListGroupsRequest) GetPageSize() int32 {
+func (m *ListGroupsRequest) GetPageSize() uint32 {
 	if m != nil {
 		return m.PageSize
 	}
@@ -923,7 +588,7 @@ func (m *ListGroupsResponse) Reset()         { *m = ListGroupsResponse{} }
 func (m *ListGroupsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListGroupsResponse) ProtoMessage()    {}
 func (*ListGroupsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{10}
+	return fileDescriptor_e1e7723af4c007b7, []int{8}
 }
 
 func (m *ListGroupsResponse) XXX_Unmarshal(b []byte) error {
@@ -959,17 +624,20 @@ func (m *ListGroupsResponse) GetNextPageToken() string {
 }
 
 type GetGroupRequest struct {
-	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional. Used to specify a subset of fields that should be
+	// returned by a get operation or modified by an update operation.
+	FieldMask            *field_mask.FieldMask `protobuf:"bytes,2,opt,name=field_mask,json=fieldMask,proto3" json:"field_mask,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *GetGroupRequest) Reset()         { *m = GetGroupRequest{} }
 func (m *GetGroupRequest) String() string { return proto.CompactTextString(m) }
 func (*GetGroupRequest) ProtoMessage()    {}
 func (*GetGroupRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{11}
+	return fileDescriptor_e1e7723af4c007b7, []int{9}
 }
 
 func (m *GetGroupRequest) XXX_Unmarshal(b []byte) error {
@@ -997,6 +665,13 @@ func (m *GetGroupRequest) GetId() string {
 	return ""
 }
 
+func (m *GetGroupRequest) GetFieldMask() *field_mask.FieldMask {
+	if m != nil {
+		return m.FieldMask
+	}
+	return nil
+}
+
 type CreateGroupRequest struct {
 	// The group id to use for this group
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1011,7 +686,7 @@ func (m *CreateGroupRequest) Reset()         { *m = CreateGroupRequest{} }
 func (m *CreateGroupRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateGroupRequest) ProtoMessage()    {}
 func (*CreateGroupRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{12}
+	return fileDescriptor_e1e7723af4c007b7, []int{10}
 }
 
 func (m *CreateGroupRequest) XXX_Unmarshal(b []byte) error {
@@ -1061,7 +736,7 @@ func (m *UpdateGroupRequest) Reset()         { *m = UpdateGroupRequest{} }
 func (m *UpdateGroupRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateGroupRequest) ProtoMessage()    {}
 func (*UpdateGroupRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{13}
+	return fileDescriptor_e1e7723af4c007b7, []int{11}
 }
 
 func (m *UpdateGroupRequest) XXX_Unmarshal(b []byte) error {
@@ -1107,7 +782,7 @@ func (m *DeleteGroupRequest) Reset()         { *m = DeleteGroupRequest{} }
 func (m *DeleteGroupRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteGroupRequest) ProtoMessage()    {}
 func (*DeleteGroupRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{14}
+	return fileDescriptor_e1e7723af4c007b7, []int{12}
 }
 
 func (m *DeleteGroupRequest) XXX_Unmarshal(b []byte) error {
@@ -1147,7 +822,7 @@ func (m *AddMemberRequest) Reset()         { *m = AddMemberRequest{} }
 func (m *AddMemberRequest) String() string { return proto.CompactTextString(m) }
 func (*AddMemberRequest) ProtoMessage()    {}
 func (*AddMemberRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{15}
+	return fileDescriptor_e1e7723af4c007b7, []int{13}
 }
 
 func (m *AddMemberRequest) XXX_Unmarshal(b []byte) error {
@@ -1188,7 +863,7 @@ func (m *RemoveMemberRequest) Reset()         { *m = RemoveMemberRequest{} }
 func (m *RemoveMemberRequest) String() string { return proto.CompactTextString(m) }
 func (*RemoveMemberRequest) ProtoMessage()    {}
 func (*RemoveMemberRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{16}
+	return fileDescriptor_e1e7723af4c007b7, []int{14}
 }
 
 func (m *RemoveMemberRequest) XXX_Unmarshal(b []byte) error {
@@ -1217,7 +892,7 @@ func (m *RemoveMemberRequest) GetId() string {
 }
 
 type ListMembersRequest struct {
-	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageSize uint32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional. A pagination token returned from a previous call to `Get`
 	// that indicates from where search should continue
 	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
@@ -1252,7 +927,7 @@ func (m *ListMembersRequest) Reset()         { *m = ListMembersRequest{} }
 func (m *ListMembersRequest) String() string { return proto.CompactTextString(m) }
 func (*ListMembersRequest) ProtoMessage()    {}
 func (*ListMembersRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{17}
+	return fileDescriptor_e1e7723af4c007b7, []int{15}
 }
 
 func (m *ListMembersRequest) XXX_Unmarshal(b []byte) error {
@@ -1273,7 +948,7 @@ func (m *ListMembersRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ListMembersRequest proto.InternalMessageInfo
 
-func (m *ListMembersRequest) GetPageSize() int32 {
+func (m *ListMembersRequest) GetPageSize() uint32 {
 	if m != nil {
 		return m.PageSize
 	}
@@ -1318,7 +993,7 @@ func (m *ListMembersResponse) Reset()         { *m = ListMembersResponse{} }
 func (m *ListMembersResponse) String() string { return proto.CompactTextString(m) }
 func (*ListMembersResponse) ProtoMessage()    {}
 func (*ListMembersResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{18}
+	return fileDescriptor_e1e7723af4c007b7, []int{16}
 }
 
 func (m *ListMembersResponse) XXX_Unmarshal(b []byte) error {
@@ -1354,82 +1029,42 @@ func (m *ListMembersResponse) GetNextPageToken() string {
 }
 
 type Group struct {
-	// The unique identifier for the group.
-	// Returned by default. Inherited from directoryObject. Key. Not nullable. Read-only.
+	// The unique identifier for the account.
+	// Key. Not nullable. Non reassignable. Read-only.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// The display name for the group. This property is required when a group is created and cannot be cleared during updates.
-	// Returned by default. Supports $filter and $orderby.
-	// groupofnames MUST cn
+	// The name displayed in places where spaces are allowed.
+	// POSIX does not allow whitespace in goup names, so we use `groupname` there
+	// Corresponds to LDAP:
+	// - ponixaccount MUST cn
+	// - displayname
 	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	// Users, contacts, and groups that are members of this group. HTTP Methods: GET (supported for all groups), POST (supported for security groups and mail-enabled security groups), DELETE (supported only for security groups) Read-only. Nullable.
-	// TODO accounts (users) only for now, we can add groups with the dedicated message using oneof construct later
-	Members []*Account `protobuf:"bytes,3,rep,name=members,proto3" json:"members,omitempty"`
-	// groupofnames MAY businessCategory
-	// groupofnames MAY o
-	// groupofnames MAY ou
-	// groupofnames MAY owner, SINGLE-VALUE but there might be multiple owners
-	Owners []*Account `protobuf:"bytes,4,rep,name=owners,proto3" json:"owners,omitempty"`
-	// An optional description for the group. Returned by default.
-	// groupofnames MAY description
+	// The shorthand groupname, used for display in POSIX systems
+	// Corresponds to LDAP:
+	// - groupofnames MUST cn
+	// - (AD) Group MAY samaccountname (limited to 20 chars)
+	// Not nullable. Reassignable.
+	Groupname string `protobuf:"bytes,3,opt,name=groupname,proto3" json:"groupname,omitempty"`
+	// The numeric group id. Used for exposing the group using ldap to POSIX systems
+	// Corresponds to LDAP:
+	// - posixgroup MUST gidnumber
+	// Not nullable.
+	Gid int64 `protobuf:"varint,4,opt,name=gid,proto3" json:"gid,omitempty"`
+	// A description, useful for resource groups
+	// Corresponds to LDAP:
+	// - posixgroup MAY description
 	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	// used for exposing the user using ldap
-	// posixgroup MUST gidnumber
-	GidNumber int64 `protobuf:"varint,6,opt,name=gid_number,json=gidNumber,proto3" json:"gid_number,omitempty"`
-	// Timestamp of when the group was created. The value cannot be modified and is automatically populated when the group is created
-	// Returned by default. Read-only.
-	CreatedDateTime *timestamp.Timestamp `protobuf:"bytes,7,opt,name=created_date_time,json=createdDateTime,proto3" json:"created_date_time,omitempty"`
-	// For some Azure Active Directory objects (user, group, application), if the object is deleted, it is first logically deleted, and this property is updated with the date and time when the object was deleted. Otherwise this property is null. If the object is restored, this property is updated to null.
-	// Returned by default. Read-only.
-	DeletedDateTime *timestamp.Timestamp `protobuf:"bytes,8,opt,name=deleted_date_time,json=deletedDateTime,proto3" json:"deleted_date_time,omitempty"`
-	// Timestamp of when the group is set to expire. The value cannot be modified and is automatically populated when the group is created.
-	// Returned by default. Read-only.
-	ExpirationDateTime *timestamp.Timestamp `protobuf:"bytes,9,opt,name=expiration_date_time,json=expirationDateTime,proto3" json:"expiration_date_time,omitempty"`
-	// True if the group is not displayed in certain parts of the Outlook user interface:
-	// in the Address Book, in address lists for selecting message recipients, and in the Browse Groups dialog for searching groups; false otherwise. Default value is false.
-	// Returned only on $select.
-	HideFromAddressLists bool `protobuf:"varint,10,opt,name=hide_from_address_lists,json=hideFromAddressLists,proto3" json:"hide_from_address_lists,omitempty"`
-	// 	Specifies the visibility of an Office 365 group. Possible values are: Private, Public, or Hiddenmembership; blank values are treated as public. See group visibility options to learn more.
-	// Visibility can be set only when a group is created; it is not editable.
-	// Returned by default.
-	Visibility string `protobuf:"bytes,11,opt,name=visibility,proto3" json:"visibility,omitempty"`
-	// *true* if this group is synced from an on-premises directory;
-	// *false* if this group was originally synced from an on-premises directory but is no longer synced;
-	// null if this object has never been synced from an on-premises directory (default).
-	// Returned by default. Read-only. Supports $filter.
-	OnPremisesSyncEnabled bool `protobuf:"varint,20,opt,name=on_premises_sync_enabled,json=onPremisesSyncEnabled,proto3" json:"on_premises_sync_enabled,omitempty"`
-	// This property is used to associate an on-premises LDAP user to the ocis account object.
-	// This property must be specified when creating a new user account in the Graph if you are using a federated domain for the user’s userPrincipalName (UPN) property.
-	// Important: The $ and _ characters cannot be used when specifying this property. Supports $filter.
-	OnPremisesImmutableId string `protobuf:"bytes,21,opt,name=on_premises_immutable_id,json=onPremisesImmutableId,proto3" json:"on_premises_immutable_id,omitempty"`
-	// Contains the on-premises security identifier (SID) for the group that was synchronized from on-premises to the cloud. Returned by default. Read-only.
-	OnPremisesSecurityIdentifier string `protobuf:"bytes,22,opt,name=on_premises_security_identifier,json=onPremisesSecurityIdentifier,proto3" json:"on_premises_security_identifier,omitempty"`
-	// Contains the on-premises LDAP `distinguished name` or `DN`.
-	// The property is only populated for customers who are synchronizing their on-premises directory to ocis-accounts. Read-only.
-	OnPremisesDistinguishedName string `protobuf:"bytes,23,opt,name=on_premises_distinguished_name,json=onPremisesDistinguishedName,proto3" json:"on_premises_distinguished_name,omitempty"`
-	// Contains the on-premises `samAccountName` synchronized from the on-premises directory.
-	// The property is only populated for customers who are synchronizing their on-premises directory to ocis-accounts. Returned by default. Read-only.
-	OnPremisesSamAccountName string `protobuf:"bytes,24,opt,name=on_premises_sam_account_name,json=onPremisesSamAccountName,proto3" json:"on_premises_sam_account_name,omitempty"`
-	// Contains the on-premises domain FQDN, also called dnsDomainName synchronized from the on-premises directory. The property is only populated for customers who are synchronizing their on-premises directory to Azure Active Directory via Azure AD Connect.
-	// Returned by default. Read-only.
-	OnPremisesDomainName string `protobuf:"bytes,25,opt,name=on_premises_domain_name,json=onPremisesDomainName,proto3" json:"on_premises_domain_name,omitempty"`
-	// 	Contains the on-premises netBios name synchronized from the on-premises directory. The property is only populated for customers who are synchronizing their on-premises directory to Azure Active Directory via Azure AD Connect.
-	// Returned by default. Read-only.
-	OnPremisesNetBiosName string `protobuf:"bytes,26,opt,name=on_premises_net_bios_name,json=onPremisesNetBiosName,proto3" json:"on_premises_net_bios_name,omitempty"`
-	// Indicates the last time at which the group was synced with the on-premises directory.
-	// Returned by default. Read-only. Supports $filter.
-	OnPremisesLastSyncDateTime string `protobuf:"bytes,27,opt,name=on_premises_last_sync_date_time,json=onPremisesLastSyncDateTime,proto3" json:"on_premises_last_sync_date_time,omitempty"`
-	// Errors when using synchronization during provisioning.
-	OnPremisesProvisioningErrors []*OnPremisesProvisioningError `protobuf:"bytes,28,rep,name=on_premises_provisioning_errors,json=onPremisesProvisioningErrors,proto3" json:"on_premises_provisioning_errors,omitempty"`
-	XXX_NoUnkeyedLiteral         struct{}                       `json:"-"`
-	XXX_unrecognized             []byte                         `json:"-"`
-	XXX_sizecache                int32                          `json:"-"`
+	// groupofnames MUST/MAY member
+	Members              []*Account `protobuf:"bytes,6,rep,name=members,proto3" json:"members,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
+	XXX_unrecognized     []byte     `json:"-"`
+	XXX_sizecache        int32      `json:"-"`
 }
 
 func (m *Group) Reset()         { *m = Group{} }
 func (m *Group) String() string { return proto.CompactTextString(m) }
 func (*Group) ProtoMessage()    {}
 func (*Group) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{19}
+	return fileDescriptor_e1e7723af4c007b7, []int{17}
 }
 
 func (m *Group) XXX_Unmarshal(b []byte) error {
@@ -1464,18 +1099,18 @@ func (m *Group) GetDisplayName() string {
 	return ""
 }
 
-func (m *Group) GetMembers() []*Account {
+func (m *Group) GetGroupname() string {
 	if m != nil {
-		return m.Members
+		return m.Groupname
 	}
-	return nil
+	return ""
 }
 
-func (m *Group) GetOwners() []*Account {
+func (m *Group) GetGid() int64 {
 	if m != nil {
-		return m.Owners
+		return m.Gid
 	}
-	return nil
+	return 0
 }
 
 func (m *Group) GetDescription() string {
@@ -1485,176 +1120,11 @@ func (m *Group) GetDescription() string {
 	return ""
 }
 
-func (m *Group) GetGidNumber() int64 {
+func (m *Group) GetMembers() []*Account {
 	if m != nil {
-		return m.GidNumber
-	}
-	return 0
-}
-
-func (m *Group) GetCreatedDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.CreatedDateTime
+		return m.Members
 	}
 	return nil
-}
-
-func (m *Group) GetDeletedDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.DeletedDateTime
-	}
-	return nil
-}
-
-func (m *Group) GetExpirationDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.ExpirationDateTime
-	}
-	return nil
-}
-
-func (m *Group) GetHideFromAddressLists() bool {
-	if m != nil {
-		return m.HideFromAddressLists
-	}
-	return false
-}
-
-func (m *Group) GetVisibility() string {
-	if m != nil {
-		return m.Visibility
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesSyncEnabled() bool {
-	if m != nil {
-		return m.OnPremisesSyncEnabled
-	}
-	return false
-}
-
-func (m *Group) GetOnPremisesImmutableId() string {
-	if m != nil {
-		return m.OnPremisesImmutableId
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesSecurityIdentifier() string {
-	if m != nil {
-		return m.OnPremisesSecurityIdentifier
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesDistinguishedName() string {
-	if m != nil {
-		return m.OnPremisesDistinguishedName
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesSamAccountName() string {
-	if m != nil {
-		return m.OnPremisesSamAccountName
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesDomainName() string {
-	if m != nil {
-		return m.OnPremisesDomainName
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesNetBiosName() string {
-	if m != nil {
-		return m.OnPremisesNetBiosName
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesLastSyncDateTime() string {
-	if m != nil {
-		return m.OnPremisesLastSyncDateTime
-	}
-	return ""
-}
-
-func (m *Group) GetOnPremisesProvisioningErrors() []*OnPremisesProvisioningError {
-	if m != nil {
-		return m.OnPremisesProvisioningErrors
-	}
-	return nil
-}
-
-type OnPremisesProvisioningError struct {
-	// Category of the provisioning error. Note: Currently, there is only one possible value. Possible value: PropertyConflict - indicates a property value is not unique. Other objects contain the same value for the property.
-	Category string `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`
-	// The date and time at which the error occurred.
-	OccurredDateTime *timestamp.Timestamp `protobuf:"bytes,2,opt,name=occurred_date_time,json=occurredDateTime,proto3" json:"occurred_date_time,omitempty"`
-	// Name of the directory property causing the error. Current possible values: UserPrincipalName or ProxyAddress
-	PropertyCausingError string `protobuf:"bytes,3,opt,name=property_causing_error,json=propertyCausingError,proto3" json:"property_causing_error,omitempty"`
-	// Value of the property causing the error.
-	Value                string   `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *OnPremisesProvisioningError) Reset()         { *m = OnPremisesProvisioningError{} }
-func (m *OnPremisesProvisioningError) String() string { return proto.CompactTextString(m) }
-func (*OnPremisesProvisioningError) ProtoMessage()    {}
-func (*OnPremisesProvisioningError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e1e7723af4c007b7, []int{20}
-}
-
-func (m *OnPremisesProvisioningError) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_OnPremisesProvisioningError.Unmarshal(m, b)
-}
-func (m *OnPremisesProvisioningError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_OnPremisesProvisioningError.Marshal(b, m, deterministic)
-}
-func (m *OnPremisesProvisioningError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OnPremisesProvisioningError.Merge(m, src)
-}
-func (m *OnPremisesProvisioningError) XXX_Size() int {
-	return xxx_messageInfo_OnPremisesProvisioningError.Size(m)
-}
-func (m *OnPremisesProvisioningError) XXX_DiscardUnknown() {
-	xxx_messageInfo_OnPremisesProvisioningError.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_OnPremisesProvisioningError proto.InternalMessageInfo
-
-func (m *OnPremisesProvisioningError) GetCategory() string {
-	if m != nil {
-		return m.Category
-	}
-	return ""
-}
-
-func (m *OnPremisesProvisioningError) GetOccurredDateTime() *timestamp.Timestamp {
-	if m != nil {
-		return m.OccurredDateTime
-	}
-	return nil
-}
-
-func (m *OnPremisesProvisioningError) GetPropertyCausingError() string {
-	if m != nil {
-		return m.PropertyCausingError
-	}
-	return ""
-}
-
-func (m *OnPremisesProvisioningError) GetValue() string {
-	if m != nil {
-		return m.Value
-	}
-	return ""
 }
 
 func init() {
@@ -1665,8 +1135,6 @@ func init() {
 	proto.RegisterType((*UpdateAccountRequest)(nil), "settings.UpdateAccountRequest")
 	proto.RegisterType((*DeleteAccountRequest)(nil), "settings.DeleteAccountRequest")
 	proto.RegisterType((*Account)(nil), "settings.Account")
-	proto.RegisterType((*Identities)(nil), "settings.Identities")
-	proto.RegisterType((*PasswordProfile)(nil), "settings.PasswordProfile")
 	proto.RegisterType((*ListGroupsRequest)(nil), "settings.ListGroupsRequest")
 	proto.RegisterType((*ListGroupsResponse)(nil), "settings.ListGroupsResponse")
 	proto.RegisterType((*GetGroupRequest)(nil), "settings.GetGroupRequest")
@@ -1678,134 +1146,77 @@ func init() {
 	proto.RegisterType((*ListMembersRequest)(nil), "settings.ListMembersRequest")
 	proto.RegisterType((*ListMembersResponse)(nil), "settings.ListMembersResponse")
 	proto.RegisterType((*Group)(nil), "settings.Group")
-	proto.RegisterType((*OnPremisesProvisioningError)(nil), "settings.OnPremisesProvisioningError")
 }
 
 func init() { proto.RegisterFile("accounts.proto", fileDescriptor_e1e7723af4c007b7) }
 
 var fileDescriptor_e1e7723af4c007b7 = []byte{
-	// 1955 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x59, 0xeb, 0x6e, 0xdc, 0xc6,
-	0x15, 0xc6, 0x4a, 0x96, 0xb4, 0x3a, 0x2b, 0x59, 0xd2, 0x68, 0x2d, 0x51, 0xab, 0x8b, 0x37, 0xf4,
-	0x25, 0xb2, 0x94, 0x4a, 0x86, 0x9a, 0xf4, 0xe2, 0x34, 0x05, 0x64, 0xc9, 0x76, 0x85, 0xda, 0x8e,
-	0xb0, 0x72, 0x1a, 0xf4, 0x82, 0x10, 0x14, 0x39, 0xbb, 0x9a, 0x78, 0x79, 0xc9, 0xcc, 0x70, 0xad,
-	0x4d, 0x11, 0xa0, 0xe8, 0x0b, 0xf4, 0x47, 0x1f, 0xa4, 0x97, 0x17, 0xe9, 0x8f, 0xbe, 0x40, 0x7e,
-	0xf4, 0x57, 0xdf, 0xa1, 0x40, 0x31, 0x17, 0x92, 0xc3, 0xe5, 0x5e, 0x52, 0x24, 0x40, 0x61, 0x20,
-	0xbf, 0xb4, 0x9c, 0x73, 0xe6, 0xfb, 0xce, 0x9c, 0x73, 0x38, 0xf3, 0x71, 0x04, 0x37, 0x5d, 0xcf,
-	0x8b, 0x92, 0x90, 0xb3, 0x83, 0x98, 0x46, 0x3c, 0x42, 0x55, 0x86, 0x39, 0x27, 0x61, 0x87, 0x35,
-	0x6e, 0x77, 0xa2, 0xa8, 0xd3, 0xc5, 0x87, 0x6e, 0x4c, 0x0e, 0xdb, 0x04, 0x77, 0x7d, 0xe7, 0x12,
-	0x5f, 0xb9, 0x3d, 0x12, 0x51, 0xe5, 0xda, 0xd8, 0x32, 0x1c, 0xdc, 0x30, 0x8c, 0xb8, 0xcb, 0x49,
-	0x14, 0x6a, 0xa0, 0xc6, 0xa6, 0xb6, 0xca, 0xa7, 0xcb, 0xa4, 0x7d, 0x88, 0x83, 0x98, 0xf7, 0xb5,
-	0xb1, 0x39, 0x68, 0x54, 0x04, 0x81, 0xcb, 0x5e, 0x6b, 0x8f, 0xdb, 0x83, 0x1e, 0x9c, 0x04, 0x98,
-	0x71, 0x37, 0x88, 0x95, 0x83, 0xfd, 0xb7, 0x0a, 0xac, 0x3e, 0x27, 0x8c, 0x1f, 0xeb, 0xf8, 0x5b,
-	0xf8, 0x8b, 0x04, 0x33, 0x8e, 0x9a, 0x30, 0x1f, 0xbb, 0x1d, 0xec, 0x30, 0xf2, 0x25, 0xb6, 0x2a,
-	0xcd, 0xca, 0xee, 0xcc, 0xe3, 0xe9, 0xaf, 0x8f, 0x2b, 0xad, 0xaa, 0x18, 0xbd, 0x20, 0x5f, 0x62,
-	0x64, 0x03, 0x48, 0x0f, 0x1e, 0xbd, 0xc6, 0xa1, 0x35, 0xd5, 0xac, 0xec, 0xce, 0x2b, 0x17, 0x39,
-	0xf1, 0x95, 0x18, 0x45, 0x3f, 0x05, 0xc8, 0x43, 0xb2, 0xa6, 0x9b, 0x95, 0xdd, 0xda, 0x51, 0xe3,
-	0x40, 0xc5, 0x74, 0x90, 0xc6, 0x74, 0xf0, 0x54, 0xb8, 0xbc, 0x70, 0xd9, 0xeb, 0xd6, 0x7c, 0x3b,
-	0xfd, 0x89, 0x36, 0x60, 0xe6, 0x8b, 0x04, 0xd3, 0xbe, 0x75, 0x23, 0x47, 0x56, 0x23, 0x76, 0x00,
-	0xf5, 0x62, 0xc8, 0x2c, 0x8e, 0x42, 0x86, 0xd1, 0x0f, 0xa0, 0x9a, 0x96, 0xc1, 0xaa, 0x34, 0xa7,
-	0x77, 0x6b, 0x47, 0x2b, 0x07, 0x69, 0x1d, 0x0e, 0xb4, 0x77, 0x2b, 0x73, 0x41, 0xf7, 0x61, 0x29,
-	0xc4, 0xd7, 0xdc, 0x19, 0x5c, 0x45, 0x6b, 0x51, 0x0c, 0x9f, 0xa7, 0x8b, 0xb0, 0xef, 0xc0, 0xca,
-	0x33, 0x9c, 0xb2, 0xa5, 0xf9, 0xb9, 0x09, 0x53, 0xc4, 0x97, 0x89, 0x99, 0x6f, 0x4d, 0x11, 0xdf,
-	0xbe, 0x80, 0xfa, 0x09, 0xc5, 0x2e, 0xc7, 0xe3, 0xfd, 0xd0, 0x3e, 0xcc, 0xe9, 0x00, 0x24, 0xd9,
-	0xd0, 0x10, 0x53, 0x0f, 0xfb, 0x0f, 0x15, 0xa8, 0x7f, 0x12, 0xfb, 0x65, 0x54, 0x03, 0xa5, 0x32,
-	0x09, 0x05, 0x7d, 0x08, 0xb5, 0x44, 0x82, 0xa8, 0x2a, 0x4c, 0x4d, 0xac, 0x02, 0x28, 0x77, 0xf1,
-	0xdb, 0xbe, 0x0f, 0xf5, 0x53, 0xdc, 0xc5, 0x93, 0xd6, 0x65, 0xff, 0x67, 0x01, 0xe6, 0xb4, 0x4b,
-	0x69, 0xcd, 0xef, 0xc2, 0x92, 0x8e, 0xc5, 0xc1, 0xa1, 0x7b, 0xd9, 0xc5, 0xbe, 0x0c, 0xa2, 0xda,
-	0x4a, 0xdf, 0x9a, 0x27, 0x6a, 0x14, 0x1d, 0xc0, 0x2a, 0x61, 0x0e, 0xc5, 0x2c, 0x4a, 0xa8, 0x87,
-	0x9d, 0x74, 0x89, 0xd3, 0xd2, 0x79, 0x85, 0x88, 0x4a, 0x4b, 0x4b, 0x4a, 0x74, 0x07, 0x16, 0x3d,
-	0x91, 0x74, 0x12, 0x85, 0x0e, 0xef, 0xc7, 0x58, 0xf5, 0x4a, 0x6b, 0x21, 0x1d, 0x7c, 0xd5, 0x8f,
-	0x31, 0x7a, 0x1f, 0x80, 0xf8, 0x38, 0xe4, 0x84, 0x13, 0xcc, 0xac, 0x19, 0xd9, 0x17, 0xf5, 0x3c,
-	0x5d, 0x67, 0x99, 0xad, 0x65, 0xf8, 0xa1, 0x77, 0x60, 0xc1, 0x27, 0x2c, 0xee, 0xba, 0x7d, 0x27,
-	0x74, 0x03, 0x6c, 0xcd, 0x4a, 0xe4, 0x9a, 0x1e, 0x7b, 0xe9, 0x06, 0x18, 0x35, 0xa0, 0x9a, 0x30,
-	0x4c, 0xa5, 0x79, 0x4e, 0x9a, 0xb3, 0x67, 0xb4, 0x0d, 0x90, 0x10, 0xdf, 0x09, 0x93, 0xe0, 0x12,
-	0x53, 0xab, 0xda, 0xac, 0xec, 0x4e, 0xb7, 0xe6, 0x13, 0xe2, 0xbf, 0x94, 0x03, 0xc2, 0xdc, 0xc9,
-	0xcd, 0xf3, 0xca, 0xdc, 0xc9, 0xcc, 0x08, 0x6e, 0x04, 0x2e, 0xe9, 0x5a, 0x20, 0x51, 0xe5, 0x6f,
-	0xd4, 0x84, 0x9a, 0x8f, 0x99, 0x47, 0x49, 0x2c, 0x56, 0x66, 0xd5, 0x74, 0x3c, 0xf9, 0x10, 0x3a,
-	0x85, 0xe5, 0xd8, 0x65, 0xec, 0x4d, 0x44, 0x7d, 0x27, 0xa6, 0x51, 0x9b, 0x74, 0xb1, 0xb5, 0x20,
-	0x8b, 0xbd, 0x91, 0x2f, 0xf7, 0x5c, 0x7b, 0x9c, 0x2b, 0x87, 0xd6, 0x52, 0x5c, 0x1c, 0x40, 0xfb,
-	0x50, 0x0d, 0xb0, 0x88, 0xe2, 0xe3, 0xb6, 0xb5, 0x28, 0x93, 0xb5, 0x94, 0xcf, 0x7e, 0x46, 0xa3,
-	0x24, 0x6e, 0x65, 0x0e, 0xe8, 0x29, 0xac, 0xc8, 0x5c, 0x63, 0xdf, 0x91, 0x0d, 0x26, 0x76, 0x17,
-	0x6b, 0x79, 0x44, 0x83, 0xbd, 0x4a, 0xb7, 0x9e, 0xd6, 0x92, 0x9e, 0x74, 0xea, 0x72, 0x2c, 0x46,
-	0x05, 0x8e, 0x2f, 0xbb, 0xcc, 0xc4, 0x59, 0x99, 0x8c, 0xa3, 0x27, 0x65, 0x38, 0x3f, 0x06, 0x2b,
-	0x0a, 0x9d, 0x98, 0xe2, 0x80, 0x30, 0xcc, 0x1c, 0xd6, 0x0f, 0xbd, 0xac, 0xe5, 0xea, 0xb2, 0x8b,
-	0x6e, 0x45, 0xe1, 0xb9, 0x36, 0x5f, 0xf4, 0x43, 0x2f, 0xed, 0xbc, 0x81, 0x89, 0x24, 0x08, 0x12,
-	0x2e, 0x2c, 0x0e, 0xf1, 0xad, 0x5b, 0x32, 0xd5, 0xc6, 0xc4, 0xb3, 0xd4, 0x7a, 0xe6, 0xa3, 0x27,
-	0x70, 0xbb, 0xc0, 0x88, 0xbd, 0x84, 0x12, 0xde, 0x77, 0x54, 0x2b, 0xb5, 0x09, 0xa6, 0xd6, 0x9a,
-	0x9c, 0xbf, 0x65, 0x10, 0x6b, 0xa7, 0xb3, 0xcc, 0x07, 0x9d, 0xc0, 0x8e, 0x09, 0xe3, 0x13, 0x26,
-	0x12, 0x9e, 0x10, 0x76, 0x85, 0x7d, 0xd5, 0x80, 0xeb, 0x12, 0x65, 0x33, 0x47, 0x39, 0x35, 0x7d,
-	0x64, 0x43, 0xfe, 0x1c, 0xb6, 0x0a, 0xb1, 0xb8, 0x41, 0xfa, 0x0a, 0x29, 0x08, 0x4b, 0x42, 0x58,
-	0x46, 0x20, 0x6e, 0xa0, 0x5f, 0x25, 0x39, 0xff, 0x03, 0x58, 0x2f, 0x04, 0x11, 0x05, 0x2e, 0x09,
-	0xd5, 0xd4, 0x0d, 0x39, 0xb5, 0x6e, 0xb0, 0x4b, 0xa3, 0x9c, 0x76, 0x5a, 0x4c, 0x81, 0x78, 0x07,
-	0x9c, 0x98, 0x92, 0xd0, 0x23, 0xb1, 0xdb, 0x55, 0xd3, 0x1b, 0x83, 0xc1, 0x7f, 0xc2, 0x30, 0x3d,
-	0x4f, 0x7d, 0x24, 0x8a, 0x53, 0x44, 0xe9, 0xba, 0x8c, 0xab, 0xfa, 0xe5, 0x0d, 0xb1, 0x35, 0xb1,
-	0x21, 0x1a, 0x39, 0xc3, 0x73, 0x97, 0x71, 0x51, 0xe1, 0xac, 0x37, 0xba, 0x45, 0x82, 0x98, 0x46,
-	0x3d, 0xc2, 0x48, 0x14, 0x92, 0xb0, 0xe3, 0x60, 0x4a, 0x23, 0xca, 0xac, 0x6d, 0xd9, 0xef, 0xf7,
-	0xf2, 0x7e, 0xff, 0x38, 0x83, 0x3b, 0x37, 0xdc, 0x9f, 0x08, 0x6f, 0xb3, 0xa0, 0x25, 0x23, 0x13,
-	0x5b, 0x19, 0xbe, 0xe6, 0x62, 0x37, 0xe8, 0xaa, 0x8c, 0x30, 0xee, 0x72, 0x6c, 0xed, 0xca, 0x44,
-	0xac, 0xa4, 0x26, 0x91, 0x86, 0x0b, 0x61, 0x40, 0x04, 0xee, 0x0e, 0xf1, 0x77, 0xbc, 0x2b, 0x37,
-	0xec, 0x60, 0x23, 0x07, 0x0f, 0x26, 0xe6, 0xe0, 0x76, 0x09, 0xfc, 0x44, 0x82, 0x64, 0x89, 0xe8,
-	0xc0, 0x1d, 0x8a, 0xdb, 0x14, 0xb3, 0x2b, 0x75, 0xea, 0x31, 0xa7, 0xe7, 0x76, 0x89, 0xef, 0xb4,
-	0x69, 0x14, 0x18, 0x4c, 0x3f, 0x9b, 0xc8, 0xb4, 0xa3, 0x61, 0xe4, 0x31, 0xc9, 0x7e, 0x25, 0x40,
-	0x9e, 0xd2, 0x28, 0xc8, 0x88, 0x3e, 0x87, 0x7b, 0x8c, 0x74, 0x42, 0x87, 0x84, 0x0e, 0xc3, 0x4c,
-	0xe4, 0x67, 0x04, 0xd5, 0x47, 0x93, 0x17, 0x25, 0x80, 0xce, 0xc2, 0x0b, 0x0d, 0x53, 0xe2, 0xb2,
-	0x39, 0x40, 0xbe, 0x93, 0xa3, 0x26, 0x2c, 0xa4, 0xcc, 0xf2, 0x5c, 0x50, 0x67, 0x11, 0x28, 0x10,
-	0x79, 0x2a, 0xac, 0xc1, 0x2c, 0x61, 0x2c, 0xc1, 0x54, 0x9f, 0xf9, 0xfa, 0x09, 0xbd, 0x07, 0x48,
-	0xfd, 0x72, 0x5c, 0x26, 0xdc, 0xb1, 0x2f, 0xb6, 0x80, 0x69, 0xe9, 0xb3, 0xac, 0x2c, 0xc7, 0xda,
-	0x70, 0xe6, 0xdb, 0x5f, 0x4f, 0xc1, 0xd2, 0xc0, 0x8e, 0x2a, 0x8e, 0x85, 0x74, 0x4f, 0xd5, 0xbc,
-	0xd9, 0x33, 0xfa, 0x0c, 0x76, 0x64, 0x63, 0x67, 0xfb, 0x74, 0xa9, 0xbe, 0x53, 0x93, 0x7b, 0x5c,
-	0x20, 0xa4, 0xa4, 0x03, 0xa5, 0xdd, 0x87, 0x95, 0xfc, 0x08, 0x88, 0xba, 0xc4, 0x13, 0x47, 0xde,
-	0x74, 0x73, 0x5a, 0x04, 0x9f, 0x6d, 0xf4, 0x7a, 0x1c, 0x9d, 0x81, 0xdd, 0x8e, 0xc4, 0x39, 0xab,
-	0x83, 0xc8, 0x66, 0x4a, 0x55, 0xa4, 0xf3, 0x27, 0x8f, 0xd4, 0x6a, 0x6b, 0x5b, 0x7a, 0x2a, 0xb6,
-	0x94, 0xfb, 0x25, 0xbe, 0xe6, 0x17, 0x32, 0xa3, 0xe8, 0xd7, 0xb0, 0x3f, 0x19, 0xca, 0x79, 0x43,
-	0xf8, 0x95, 0x13, 0xb4, 0x5d, 0x6b, 0x46, 0x62, 0xde, 0x1d, 0x8b, 0xf9, 0x29, 0xe1, 0x57, 0x2f,
-	0xda, 0xae, 0xfd, 0x97, 0x0a, 0xac, 0x08, 0xb5, 0x27, 0x8f, 0x9e, 0xb7, 0x42, 0x9e, 0x62, 0x40,
-	0x66, 0xc0, 0x5a, 0x9c, 0xbe, 0x0b, 0xb3, 0x1d, 0x39, 0xa2, 0xa5, 0x69, 0xe9, 0x54, 0xd5, 0xe6,
-	0x6f, 0x2c, 0x4b, 0xdf, 0x81, 0xa5, 0x67, 0x58, 0xb1, 0x8c, 0x12, 0x65, 0xbf, 0x04, 0xa4, 0x44,
-	0xe9, 0x38, 0x2f, 0x74, 0x0f, 0x66, 0x24, 0xb5, 0xee, 0xbd, 0x52, 0x60, 0xca, 0x6a, 0x5f, 0x03,
-	0x52, 0x5a, 0xb4, 0x00, 0x96, 0x4d, 0xae, 0x8c, 0x9b, 0xfc, 0xed, 0x34, 0xe8, 0x5d, 0x40, 0x4a,
-	0x83, 0x8e, 0x5d, 0xac, 0x0d, 0xcb, 0xc7, 0xbe, 0xff, 0x42, 0x4a, 0x93, 0x51, 0x3e, 0xf7, 0x60,
-	0xb5, 0x85, 0x83, 0xa8, 0x87, 0xc7, 0xbb, 0xfd, 0xb5, 0xa2, 0x4a, 0xa8, 0xbc, 0xde, 0x8a, 0xa6,
-	0xfb, 0x5c, 0x7d, 0xc6, 0x65, 0x11, 0xeb, 0xae, 0xdb, 0x87, 0x39, 0x25, 0xd6, 0xc6, 0x7c, 0x11,
-	0xa5, 0x1e, 0xdf, 0xb8, 0xf3, 0xfe, 0x5d, 0x85, 0x19, 0x59, 0x8a, 0x52, 0x2b, 0x0d, 0xaa, 0xe6,
-	0xa9, 0xb2, 0x6a, 0x36, 0x22, 0x9a, 0x9e, 0x18, 0xd1, 0x03, 0x98, 0x8d, 0xde, 0x84, 0xc2, 0xf7,
-	0xc6, 0x28, 0x5f, 0xed, 0x30, 0xa8, 0x8f, 0x67, 0xca, 0xfa, 0xb8, 0x28, 0xba, 0x67, 0x07, 0x45,
-	0xf7, 0x50, 0x2d, 0x3b, 0xf7, 0x1d, 0x69, 0xd9, 0xea, 0xff, 0xae, 0x65, 0x9f, 0x43, 0x1d, 0x5f,
-	0xc7, 0x84, 0xaa, 0xcf, 0x9b, 0x1c, 0x6a, 0x7e, 0x22, 0x14, 0xca, 0xe7, 0x65, 0x68, 0x1f, 0xc0,
-	0xfa, 0x15, 0xf1, 0xb1, 0x3a, 0x79, 0x5d, 0xdf, 0xa7, 0x98, 0x31, 0xa7, 0x4b, 0x18, 0x67, 0xf2,
-	0x2b, 0xa3, 0xda, 0xaa, 0x0b, 0xb3, 0x38, 0x52, 0x8f, 0x95, 0x51, 0x74, 0x13, 0x43, 0x3b, 0x00,
-	0x42, 0xd9, 0x5c, 0x92, 0x2e, 0xe1, 0x7d, 0xfd, 0xd1, 0x61, 0x8c, 0x7c, 0x2f, 0xb8, 0xff, 0x1f,
-	0x82, 0xfb, 0x27, 0xb0, 0x61, 0x4e, 0x0b, 0x31, 0x77, 0x2e, 0x49, 0xc4, 0x4c, 0xa9, 0x6d, 0x24,
-	0xef, 0x25, 0xe6, 0x8f, 0x49, 0xc4, 0xe4, 0xcc, 0x93, 0xc9, 0x22, 0x7b, 0x53, 0xce, 0xff, 0x96,
-	0x42, 0x7a, 0xeb, 0x3b, 0x13, 0xd2, 0xf6, 0x3f, 0x2a, 0xb0, 0x39, 0x66, 0xb6, 0x90, 0x5b, 0x9e,
-	0xcb, 0x71, 0x27, 0xa2, 0xfd, 0x54, 0x6e, 0xa5, 0xcf, 0xe8, 0x17, 0x80, 0x22, 0xcf, 0x4b, 0x28,
-	0x2d, 0xbc, 0x8b, 0x93, 0x25, 0xd6, 0x72, 0x3a, 0x2b, 0x5b, 0xf3, 0xfb, 0xb0, 0x16, 0xd3, 0x28,
-	0xc6, 0x94, 0xf7, 0x1d, 0xcf, 0x4d, 0x58, 0xb6, 0x56, 0x2d, 0x0d, 0xeb, 0xa9, 0xf5, 0x44, 0x19,
-	0x55, 0x6c, 0x75, 0x98, 0xe9, 0xb9, 0xdd, 0x24, 0xbd, 0x97, 0x50, 0x0f, 0x47, 0x7f, 0xba, 0x01,
-	0x4b, 0xe9, 0xdd, 0xd5, 0x05, 0xa6, 0x3d, 0xe2, 0x61, 0xe4, 0xc1, 0x82, 0x79, 0xa5, 0x85, 0xb6,
-	0xf3, 0xd4, 0x0d, 0xb9, 0x9d, 0x6b, 0xec, 0x8c, 0x32, 0xab, 0x6d, 0xdf, 0xae, 0xff, 0xf1, 0x9f,
-	0xff, 0xfa, 0xf3, 0xd4, 0x4d, 0xb4, 0x70, 0xd8, 0x7b, 0x78, 0x98, 0x5d, 0x78, 0xfd, 0x0e, 0x20,
-	0xbf, 0xc8, 0x42, 0x9b, 0xc6, 0x51, 0x3d, 0x78, 0xbd, 0xd5, 0x28, 0x6f, 0xb4, 0xf6, 0x8e, 0xc4,
-	0xb4, 0xd0, 0xaa, 0x89, 0x79, 0xf8, 0x7b, 0xe2, 0x7f, 0xb4, 0xf7, 0xd5, 0xa3, 0xca, 0x1e, 0x72,
-	0x61, 0xb1, 0x70, 0x03, 0x86, 0x8c, 0x20, 0x87, 0x5d, 0x8d, 0x0d, 0xe3, 0xd8, 0x96, 0x1c, 0xeb,
-	0x76, 0x21, 0xee, 0x47, 0xd9, 0x4d, 0x56, 0x0c, 0x8b, 0x85, 0xeb, 0x30, 0x93, 0x62, 0xd8, 0x3d,
-	0xd9, 0x30, 0x8a, 0xf7, 0x24, 0xc5, 0xfd, 0xa3, 0xcd, 0xe2, 0x32, 0xf4, 0xaf, 0x03, 0xb5, 0x9c,
-	0x8c, 0xd1, 0x87, 0xc5, 0xc2, 0xf5, 0x97, 0xc9, 0x38, 0xec, 0x5e, 0xac, 0xb1, 0x56, 0x6a, 0xab,
-	0x27, 0x41, 0xcc, 0xfb, 0xf6, 0xa6, 0xa4, 0xbd, 0xb5, 0x37, 0x2c, 0x7b, 0x47, 0x7f, 0x9f, 0x85,
-	0x45, 0x25, 0x17, 0xd3, 0x7e, 0xf8, 0x2d, 0x40, 0xae, 0x21, 0xcd, 0x52, 0x95, 0xa4, 0x70, 0x63,
-	0x6b, 0xb8, 0x51, 0x77, 0x02, 0x92, 0xbc, 0x0b, 0x08, 0x04, 0xaf, 0x56, 0x98, 0xaf, 0xa0, 0x9a,
-	0x2a, 0x47, 0xb4, 0x51, 0xe8, 0x02, 0x53, 0x60, 0x35, 0x06, 0xb5, 0x9c, 0xbd, 0x25, 0xb1, 0xd6,
-	0xd0, 0x4a, 0x8e, 0x65, 0xd4, 0xff, 0x53, 0xa8, 0x19, 0x62, 0x13, 0x6d, 0x0d, 0x56, 0x7f, 0x3c,
-	0xf6, 0x86, 0xc4, 0x5e, 0xb5, 0x8d, 0x38, 0x1f, 0x69, 0xed, 0xe8, 0x43, 0xcd, 0x10, 0x9e, 0x26,
-	0x70, 0x59, 0x8f, 0x96, 0x81, 0xef, 0x4b, 0xe0, 0xe6, 0xd1, 0xba, 0x19, 0xb4, 0xfc, 0xab, 0x6b,
-	0xad, 0x59, 0x3e, 0x83, 0x9a, 0x21, 0x32, 0x4d, 0x96, 0xb2, 0xf6, 0x1c, 0x59, 0x65, 0xbd, 0x8a,
-	0xbd, 0x72, 0x86, 0x90, 0x07, 0xf3, 0x99, 0x3c, 0x45, 0x0d, 0xa3, 0x2f, 0x07, 0x34, 0x6b, 0x79,
-	0x05, 0x0f, 0x24, 0xe8, 0x1d, 0x7b, 0xa7, 0x04, 0x7a, 0xa8, 0x75, 0xd2, 0xe1, 0x5d, 0x8a, 0xdb,
-	0xa2, 0x06, 0x3d, 0x58, 0x30, 0xf5, 0xad, 0xb9, 0x8d, 0x0c, 0xd1, 0xbd, 0x65, 0xaa, 0x1f, 0x49,
-	0xaa, 0x87, 0x7b, 0xfb, 0xa3, 0xa9, 0x8c, 0x37, 0xe5, 0xab, 0x8c, 0x97, 0x42, 0xcd, 0x50, 0x9f,
-	0x68, 0xa0, 0x25, 0x8b, 0x32, 0xba, 0xb1, 0x3d, 0xc2, 0xaa, 0x3b, 0x56, 0x17, 0x0c, 0x4d, 0x58,
-	0xee, 0xe3, 0xfa, 0x6f, 0x50, 0xfc, 0xba, 0xa3, 0xfe, 0xb3, 0x71, 0xd8, 0x7b, 0xf8, 0xa1, 0x2a,
-	0xc5, 0xac, 0xfc, 0xf3, 0xc3, 0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0x9c, 0x9a, 0x29, 0x88, 0x91,
-	0x19, 0x00, 0x00,
+	// 1068 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x57, 0xdd, 0x6e, 0xe3, 0x44,
+	0x14, 0x96, 0x9b, 0x26, 0x4d, 0x4e, 0x92, 0x76, 0x3b, 0x0d, 0xbb, 0xae, 0x9b, 0x96, 0x30, 0xec,
+	0x96, 0x90, 0x2e, 0x49, 0x15, 0x24, 0x24, 0xba, 0xe2, 0xa2, 0xcb, 0x4f, 0x2f, 0x60, 0x01, 0xb9,
+	0x8b, 0x90, 0x60, 0xb5, 0x91, 0x1b, 0x4f, 0xc2, 0xd0, 0xc4, 0xf6, 0xda, 0x4e, 0xd8, 0x2e, 0x5a,
+	0x09, 0xf1, 0x02, 0x5c, 0xf0, 0x20, 0xfc, 0xdc, 0xf1, 0x1c, 0xbc, 0x00, 0x17, 0x3c, 0x06, 0x17,
+	0xc8, 0x33, 0x63, 0x7b, 0xfc, 0x93, 0xa4, 0x80, 0xb8, 0xd8, 0xab, 0xd8, 0xe7, 0x9c, 0x39, 0xdf,
+	0x39, 0x73, 0x7e, 0x3e, 0x07, 0x36, 0x8d, 0xe1, 0xd0, 0x9e, 0x59, 0xbe, 0xd7, 0x75, 0x5c, 0xdb,
+	0xb7, 0x51, 0xd9, 0x23, 0xbe, 0x4f, 0xad, 0xb1, 0xa7, 0xbd, 0x3c, 0xb6, 0xed, 0xf1, 0x84, 0xf4,
+	0x0c, 0x87, 0xf6, 0x46, 0x94, 0x4c, 0xcc, 0xc1, 0x05, 0xf9, 0xca, 0x98, 0x53, 0xdb, 0xe5, 0xa6,
+	0x5a, 0x53, 0x32, 0x30, 0x2c, 0xcb, 0xf6, 0x0d, 0x9f, 0xda, 0x96, 0x70, 0xa4, 0xed, 0x09, 0x2d,
+	0x7b, 0xbb, 0x98, 0x8d, 0x7a, 0x64, 0xea, 0xf8, 0x57, 0x42, 0xd9, 0x4a, 0x2b, 0x39, 0xc0, 0xd4,
+	0xf0, 0x2e, 0xb9, 0x05, 0xfe, 0x45, 0x81, 0x9d, 0x8f, 0xa8, 0xe7, 0x9f, 0x8a, 0xf0, 0x74, 0xf2,
+	0x64, 0x46, 0x3c, 0x1f, 0xb5, 0xa0, 0xe2, 0x18, 0x63, 0x32, 0xf0, 0xe8, 0x33, 0xa2, 0x2a, 0x2d,
+	0xa5, 0x5d, 0xbf, 0x5f, 0xf8, 0xe3, 0x54, 0xd1, 0xcb, 0x81, 0xf4, 0x9c, 0x3e, 0x23, 0x08, 0x03,
+	0x30, 0x0b, 0xdf, 0xbe, 0x24, 0x96, 0xba, 0xd6, 0x52, 0xda, 0x15, 0x6e, 0xc2, 0x0e, 0x3e, 0x0c,
+	0xa4, 0xe8, 0x6d, 0x80, 0x18, 0x51, 0x2d, 0xb4, 0x94, 0x76, 0xb5, 0xaf, 0x75, 0x79, 0x50, 0xdd,
+	0x30, 0xa8, 0xee, 0x07, 0x81, 0xc9, 0x03, 0xc3, 0xbb, 0xd4, 0x2b, 0xa3, 0xf0, 0x11, 0xed, 0x42,
+	0xf1, 0xc9, 0x8c, 0xb8, 0x57, 0xea, 0x7a, 0xec, 0x99, 0x4b, 0xf0, 0x14, 0x1a, 0xc9, 0x90, 0x3d,
+	0xc7, 0xb6, 0x3c, 0x82, 0xde, 0x80, 0x72, 0x78, 0xcb, 0xaa, 0xd2, 0x2a, 0xb4, 0xab, 0xfd, 0xed,
+	0x6e, 0x78, 0xcd, 0x5d, 0x61, 0xad, 0x47, 0x26, 0xe8, 0x10, 0xb6, 0x2c, 0xf2, 0xd4, 0x1f, 0xa4,
+	0xb3, 0xd0, 0xeb, 0x81, 0xf8, 0xd3, 0x30, 0x09, 0xfc, 0x18, 0xb6, 0xcf, 0x48, 0x88, 0x16, 0xde,
+	0xcf, 0x26, 0xac, 0x51, 0x93, 0x5d, 0x4c, 0x45, 0x5f, 0xa3, 0x66, 0x2a, 0xd3, 0xb5, 0x7f, 0x90,
+	0x29, 0x3e, 0x87, 0xc6, 0xbb, 0x2e, 0x31, 0x7c, 0xb2, 0x02, 0xe2, 0x08, 0x36, 0x44, 0xec, 0xc2,
+	0x7f, 0x4e, 0x76, 0xa1, 0x05, 0xfe, 0x4e, 0x81, 0xc6, 0x67, 0x8e, 0x99, 0xf5, 0x2a, 0x79, 0x51,
+	0x56, 0x79, 0x41, 0xf7, 0xa0, 0x3a, 0x63, 0x4e, 0xae, 0x9b, 0x16, 0x70, 0x73, 0x96, 0xd7, 0x21,
+	0x34, 0xde, 0x23, 0x13, 0xb2, 0x2a, 0x2f, 0xfc, 0x97, 0x02, 0x1b, 0xc2, 0x24, 0x93, 0xf3, 0x2b,
+	0x50, 0x33, 0xa9, 0xe7, 0x4c, 0x8c, 0xab, 0x81, 0x65, 0x4c, 0x89, 0x28, 0x50, 0x55, 0xc8, 0x3e,
+	0x36, 0xa6, 0x04, 0x69, 0x50, 0x9e, 0x79, 0xc4, 0x65, 0xea, 0x02, 0x53, 0x47, 0xef, 0x81, 0xce,
+	0x31, 0x3c, 0xef, 0x1b, 0xdb, 0x35, 0x79, 0x1f, 0xe9, 0xd1, 0x3b, 0xba, 0x01, 0x85, 0x19, 0x35,
+	0xd5, 0x62, 0x4b, 0x69, 0x17, 0xf4, 0xe0, 0x31, 0x90, 0x8c, 0xa9, 0xa9, 0x96, 0xb8, 0x64, 0x4c,
+	0x4d, 0x84, 0x60, 0x7d, 0x6a, 0xd0, 0x89, 0xba, 0xc1, 0xce, 0xb2, 0x67, 0xd4, 0x82, 0xaa, 0x49,
+	0xbc, 0xa1, 0x4b, 0x9d, 0x60, 0x0c, 0xd5, 0xb2, 0x88, 0x28, 0x16, 0xa1, 0xbb, 0x50, 0x99, 0x92,
+	0xe9, 0x05, 0x71, 0x07, 0xf6, 0x48, 0xad, 0xb0, 0x46, 0xdc, 0x8a, 0x2f, 0xf9, 0xcc, 0xb5, 0x67,
+	0x8e, 0x5e, 0xe6, 0x16, 0x9f, 0x8c, 0xf0, 0x4f, 0x0a, 0x6c, 0x07, 0xed, 0xcc, 0xe4, 0x2f, 0xc4,
+	0xfc, 0x11, 0x40, 0x72, 0xc0, 0x62, 0xfa, 0x5e, 0x83, 0xd2, 0x98, 0x49, 0xc4, 0xec, 0x65, 0x52,
+	0x16, 0xea, 0x6b, 0xcf, 0xdd, 0x23, 0xd8, 0x3a, 0x23, 0x1c, 0xe5, 0x7f, 0x98, 0xba, 0x0f, 0x01,
+	0xf1, 0xa9, 0x5b, 0x0a, 0x70, 0x07, 0x8a, 0x2c, 0x6a, 0xe1, 0x3b, 0x93, 0x13, 0xd7, 0xe2, 0xa7,
+	0x80, 0xf8, 0xb0, 0x25, 0x9c, 0x45, 0x87, 0x95, 0x65, 0x87, 0xff, 0xdb, 0x90, 0xdd, 0x06, 0xc4,
+	0x87, 0x6c, 0x59, 0x1a, 0x18, 0xc3, 0x8d, 0x53, 0xd3, 0x7c, 0xc0, 0x5a, 0x6e, 0x91, 0xcd, 0x1d,
+	0xd8, 0xd1, 0xc9, 0xd4, 0x9e, 0x93, 0xe5, 0x66, 0x3f, 0x2b, 0xbc, 0xfa, 0xdc, 0xea, 0x85, 0xe8,
+	0xd7, 0xaf, 0x39, 0xc5, 0x45, 0x11, 0x8b, 0x86, 0x3d, 0x82, 0x0d, 0x3e, 0x84, 0x4b, 0xd8, 0x22,
+	0xb4, 0xb8, 0x76, 0xd3, 0xfe, 0xa6, 0x40, 0x91, 0x95, 0xe2, 0xdf, 0xac, 0xb2, 0x26, 0x54, 0x58,
+	0x4b, 0x48, 0xbb, 0x2c, 0x16, 0x84, 0xeb, 0x69, 0x3d, 0x5e, 0x4f, 0xa9, 0x55, 0x54, 0xcc, 0xae,
+	0x22, 0x29, 0xc7, 0xd2, 0xaa, 0x1c, 0xfb, 0x3f, 0xac, 0xc3, 0x56, 0x48, 0xaa, 0xe7, 0xc4, 0x9d,
+	0xd3, 0x21, 0x41, 0x43, 0xa8, 0xc9, 0x5c, 0x8b, 0xf6, 0xe3, 0xf3, 0x39, 0x9f, 0x0d, 0xda, 0xc1,
+	0x22, 0x35, 0xbf, 0x73, 0xdc, 0xf8, 0xfe, 0xf7, 0x3f, 0x7f, 0x5c, 0xdb, 0x44, 0xb5, 0xde, 0xfc,
+	0xb8, 0x17, 0x31, 0xf1, 0x23, 0x80, 0x98, 0x61, 0xd1, 0x9e, 0x34, 0x27, 0x69, 0xde, 0xd5, 0xb2,
+	0xf1, 0xe3, 0x03, 0xe6, 0x53, 0x45, 0x3b, 0xb2, 0xcf, 0xde, 0xb7, 0xd4, 0x7c, 0xa7, 0xf3, 0xfc,
+	0x44, 0xe9, 0x20, 0x03, 0xea, 0x09, 0x7e, 0x45, 0x52, 0x90, 0x79, 0xc4, 0x9b, 0x87, 0xb1, 0xcf,
+	0x30, 0x6e, 0xe1, 0x44, 0xdc, 0x27, 0x11, 0x4f, 0x3a, 0x50, 0x4f, 0x90, 0xad, 0x0c, 0x91, 0xc7,
+	0xc2, 0x79, 0x10, 0x77, 0x19, 0xc4, 0x61, 0x7f, 0x2f, 0x99, 0x86, 0x78, 0xea, 0xf2, 0x74, 0x22,
+	0x44, 0x13, 0xea, 0x09, 0x72, 0x95, 0x11, 0xf3, 0x58, 0x57, 0xbb, 0x99, 0x19, 0xa3, 0xf7, 0x83,
+	0x0f, 0x45, 0xbc, 0xc7, 0x60, 0x5f, 0xea, 0xe4, 0xdd, 0x5e, 0xff, 0xd7, 0x12, 0xd4, 0xf9, 0x9a,
+	0x0f, 0xfb, 0xe1, 0x4b, 0x80, 0x78, 0xf7, 0xcb, 0xa5, 0xca, 0x50, 0x98, 0xd6, 0xcc, 0x57, 0x8a,
+	0x4e, 0x40, 0x0c, 0xb7, 0x86, 0x20, 0xc0, 0x15, 0xcc, 0xf0, 0x10, 0xca, 0xe1, 0xc6, 0x47, 0xbb,
+	0x89, 0x2e, 0x90, 0xb7, 0x9b, 0x96, 0x5e, 0xa4, 0xb8, 0xc9, 0x7c, 0xdd, 0x44, 0xdb, 0xb1, 0x2f,
+	0xa9, 0xfe, 0x9f, 0x43, 0x55, 0xda, 0xf4, 0xa8, 0x99, 0xae, 0xfe, 0x72, 0xdf, 0xbb, 0xcc, 0xf7,
+	0x0e, 0x96, 0xe2, 0x3c, 0x11, 0x8b, 0xdb, 0x84, 0xaa, 0xb4, 0xf5, 0x65, 0xc7, 0x59, 0x32, 0xc8,
+	0x3a, 0x3e, 0x64, 0x8e, 0x5b, 0xfd, 0x5b, 0x72, 0xd0, 0xec, 0x57, 0xd4, 0x5a, 0xa0, 0x3c, 0x86,
+	0xaa, 0xb4, 0xe1, 0x65, 0x94, 0xec, 0xe2, 0x5f, 0x58, 0x65, 0x91, 0x45, 0x27, 0x7b, 0x43, 0x68,
+	0x08, 0x95, 0x88, 0x1b, 0x90, 0x26, 0xf5, 0x65, 0x8a, 0x30, 0xb2, 0x19, 0xbc, 0xce, 0x9c, 0xbe,
+	0x8a, 0x0f, 0x32, 0x4e, 0x7b, 0x62, 0xa5, 0xf4, 0x6e, 0xbb, 0x64, 0x14, 0xd4, 0x60, 0x0e, 0x35,
+	0x99, 0x5c, 0xe4, 0x35, 0x92, 0x43, 0x3a, 0x59, 0xa8, 0xb7, 0x18, 0xd4, 0x71, 0xe7, 0x68, 0x31,
+	0x94, 0x34, 0x29, 0xcf, 0x23, 0x5c, 0x17, 0xaa, 0xd2, 0xea, 0x47, 0xa9, 0x96, 0x4c, 0x72, 0x98,
+	0xb6, 0xbf, 0x40, 0x2b, 0x3a, 0x56, 0x14, 0x0c, 0xad, 0x48, 0xf7, 0x7e, 0xe3, 0x0b, 0xe4, 0x5c,
+	0x8e, 0xf9, 0x7f, 0xae, 0xde, 0xfc, 0xf8, 0x1e, 0x2f, 0x45, 0x89, 0xfd, 0xbc, 0xf9, 0x77, 0x00,
+	0x00, 0x00, 0xff, 0xff, 0x66, 0x42, 0x71, 0x8c, 0x09, 0x0e, 0x00, 0x00,
 }

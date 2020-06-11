@@ -18,7 +18,7 @@ func init() {
 	}
 }
 
-func TestEQ(t *testing.T) { testLDAPFilters(t, "accountid eq 'a-b-c-d'", "(ownclouduuid=a-b-c-d)") }
+func TestEQ(t *testing.T) { testLDAPFilters(t, "id eq 'a-b-c-d'", "(ownclouduuid=a-b-c-d)") }
 func TestNE(t *testing.T) { testLDAPFilters(t, "mail ne 'foo@bar.com'", "(!(mail=foo@bar.com))") }
 func TestGE(t *testing.T) { testLDAPFilters(t, "displayname ge 'marie'", "(displayname>=marie)") }
 func TestLE(t *testing.T) { testLDAPFilters(t, "username le 'marie'", "(uid<=marie)") }
@@ -28,10 +28,10 @@ func TestAP(t *testing.T) {
 	testLDAPFilters(t, "displayname ap 'einstein'", "(displayname~=einstein)")
 }
 func TestAND(t *testing.T) {
-	testLDAPFilters(t, "accountid le 500000 and accountid ge 300000", "(&(ownclouduuid<=500000)(ownclouduuid>=300000))")
+	testLDAPFilters(t, "id le 500000 and id ge 300000", "(&(ownclouduuid<=500000)(ownclouduuid>=300000))")
 }
 func TestOR(t *testing.T) {
-	testLDAPFilters(t, "accountid le 700000 or accountid ge 900000", "(|(ownclouduuid<=700000)(ownclouduuid>=900000))")
+	testLDAPFilters(t, "id le 700000 or id ge 900000", "(|(ownclouduuid<=700000)(ownclouduuid>=900000))")
 }
 func TestNOT(t *testing.T) {
 	// not operator takes precedence over ap, so we need brackets

@@ -129,11 +129,11 @@ func ServerWithConfig(cfg *config.Config) []cli.Flag {
 			// glauth -> support id and externalid from scim
 			Value:       "uidNumber",
 			Usage:       "LDAP schema account id",
-			EnvVars:     []string{"ACCOUNTS_LDAP_SCHEMA_ACCOUNT_ID"},
+			EnvVars:     []string{"ACCOUNTS_LDAP_SCHEMA_ACCOUNTID"},
 			Destination: &cfg.LDAP.Schema.AccountID,
 		},
 		&cli.StringFlag{
-			Name:        "ldap-schema-username",
+			Name:        "ldap-schema-preferredUsername",
 			Value:       "uid",
 			Usage:       "LDAP schema username",
 			EnvVars:     []string{"ACCOUNTS_LDAP_SCHEMA_USERNAME"},
@@ -154,10 +154,10 @@ func ServerWithConfig(cfg *config.Config) []cli.Flag {
 			Destination: &cfg.LDAP.Schema.Mail,
 		},
 		&cli.StringFlag{
-			Name:        "ldap-schema-cn",
+			Name:        "ldap-schema-memberof",
 			Value:       "memberof",
-			Usage:       "LDAP schema cn",
-			EnvVars:     []string{"ACCOUNTS_LDAP_SCHEMA_GROUPS"},
+			Usage:       "LDAP schema memberof",
+			EnvVars:     []string{"ACCOUNTS_LDAP_SCHEMA_MEMBEROF"},
 			Destination: &cfg.LDAP.Schema.Groups,
 		},
 	}
