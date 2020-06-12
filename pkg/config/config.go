@@ -18,9 +18,12 @@ type LDAP struct {
 type LDAPSchema struct {
 	AccountID   string
 	Username    string
+	Password    string
 	UID         string
 	GID         string
 	DisplayName string
+	Surname     string
+	GivenName   string
 	Mail        string
 	Description string
 	Groups      string

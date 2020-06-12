@@ -218,47 +218,59 @@ message Account {
     // - cn
     string display_name = 2;
 
+    // We keep track of the given name and surname, to be able to search them individually
+
+    // The given name (first name) of the user.
+    // Corresponds to LDAP:
+    // - givenName
+    string given_name = 3;
+
+    // The user's surname (family name or last name)
+    // Corresponds to LDAP:
+    // - sn
+    string surname = 4;
+
     // The shorthand username, used for login and display in POSIX systems
     // Corresponds to LDAP:
     // - posixaccount MUST uid
     // - (AD) User MAY samaccountname (limited to 20 chars)
     // Not nullable. Reassignable.
-    string username = 3;
+    string username = 5;
 
     // Specifies the password for the account.
     // Corresponds to LDAP:
     // - posixaccount MAY authPassword
     // Write-only.
-    string password = 4;
+    string password = 6;
 
     // The numeric user id. Used for exposing the account using ldap to POSIX systems
     // Corresponds to LDAP:
     // - posixaccount MUST uidnumber
     // Not nullable.
-    int64 uid = 5;
+    int64 uid = 7;
 
     // The primary group id. Used for exposing the account using ldap to POSIX systems
     // Corresponds to LDAP:
     // - posixaccount MUST gidnumber
     // Not nullable.
-    int64 gid = 6;
+    int64 gid = 8;
 
     // The SMTP address for the account, for example, "einstein@example.org".
     // Corresponds to LDAP:
     // - inetorgperson MAY mail
-    string mail = 7;
+    string mail = 9;
 
     // A description, useful for resource accounts
     // Corresponds to LDAP:
     // - posixaccount MAY description
-    string description = 8;
+    string description = 10;
 
     // The groups, directory roles and administrative units that the account is a member of. Read-only. Nullable.
     // should we only respond with repeated strings of ids? no clients should a proper filter mask!
 
     // Corresponds to LDAP:
     // -
-    repeated Group member_of = 9;
+    repeated Group member_of = 11;
 
     // Field numbers in the range 16 through 2047 take two bytes. So you should reserve the field numbers 1 through 15 for very frequently occurring message elements. Remember to leave some room for frequently occurring elements that might be added in the future.
 

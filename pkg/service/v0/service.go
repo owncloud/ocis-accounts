@@ -364,9 +364,156 @@ func (s Service) GetAccount(c context.Context, req *proto.GetAccountRequest, res
 	return nil
 }
 
+func (s Service) buildBaseDN(a *proto.Account) string {
+	// or should we use a fmt string in the config and replace the username in there?
+	// IIRC that is how kopano does it http://manpages.ubuntu.com/manpages/cosmic/man5/kopano-ldap.cfg.5.html
+	// USERID_SEARCH_FILTER_TEMPLATE=({loginAttribute}=%(userid)s)
+	// SEARCH_SEARCH_FILTER_TEMPLATE=(&(objectClass=organizationalPerson)(!(UserAccountControl:1.2.840.113556.1.4.803:=2))(|({emailAttribute}=*%(search)s*)({givenNameAttribute}=*%(search)s*)({familyNameAttribute}=*%(search)s*)))
+	return fmt.Sprintf("%s=%s,%s", s.Config.LDAP.Schema.Username, a.Username, s.Config.LDAP.BaseDN)
+
+	// the user relative dn is the rdn of the name of the account
+	// TODO how do we determine the rdn attribute?
+	// config option
+
+	// the user base dn describes the node in the tree where the user should be added
+	// TODO how do we determine the group?
+	// - can be empty
+	// - can be a single tree like `ou=users,dc=example,dc=org`
+	// - can be u custom tree, eg `ou=ocis-users,dc=example,dc=org`
+	// - can be a nested tree, eg `cn=accounts,ou=ocis,dc=it,dc=example,dc=org`
+	// - can be different for guests `ou=guests,oc=users,dc=example,dc=org`
+	// accounts have a numeric primary group, based on that we can build the user base dn
+	// - there should be a default group rdn, eg. `ou=users`
+	// - if it is empty, the basedn will be used directly
+	// - requires a mapping for the gid
+	// - a single config property `usergrouprdn` should suffice ...
+	// - but userbasedn is clearer and does not require explaining what an rdn is
+
+}
+
 // CreateAccount implements the AccountsServiceHandler interface
 func (s Service) CreateAccount(c context.Context, req *proto.CreateAccountRequest, res *proto.Account) (err error) {
-	return errors.New("not implemented")
+	if req.Account == nil {
+		return errors.New("please provide an account")
+	}
+	if req.Account.Username == "" {
+		return errors.New("please provide a username")
+	}
+	if req.Account.Password == "" {
+		return errors.New("please provide a password")
+	}
+	if req.Account.Id == "" {
+		return errors.New("id will be assigned by the server")
+	}
+
+	l, err := s.getBoundConnection(s.Config.LDAP.BindDN, s.Config.LDAP.BindPassword)
+	if err != nil {
+		return err
+	}
+
+	defer l.Close()
+	// Search for the given clientID
+	ar := ldap.NewAddRequest(s.buildBaseDN(req.Account))
+	if req.Id == "" {
+		return errors.New("please send a unique id, will be generated on the server in the future")
+		// TODO verify uuid?
+		// TODO generate uuid
+	}
+	ar.Attribute(s.Config.LDAP.Schema.AccountID, []string{req.Id})
+
+	// all ldap notes need the top objectclass
+	ar.Attribute("objectClass", []string{"top"})
+
+	// add the structural inetOrgPerson class for mail and displayname, requires sn
+	ar.Attribute("objectClass", []string{"inetOrgPerson"})
+
+	// we need a cn and a sn fer the inetorgperson
+	var cn string
+	if req.Account.Surname != "" {
+		ar.Attribute(s.Config.LDAP.Schema.Surname, []string{req.Account.Surname})
+
+		if req.Account.GivenName != "" {
+			// TODO make default displayname configurable, eg using a template. there will be people who want Lastname, Firstname
+			cn = fmt.Sprintf("%s %s", req.Account.GivenName, req.Account.Surname)
+		} else {
+			cn = req.Account.Surname
+		}
+	} else if req.Account.GivenName != "" {
+		// givenname is not the sn
+		if req.Account.DisplayName != "" {
+			// prefer the displayname over the username as the sn if it is set?
+			ar.Attribute(s.Config.LDAP.Schema.Surname, []string{req.Account.DisplayName})
+		} else {
+			// fallback to username
+			ar.Attribute(s.Config.LDAP.Schema.Surname, []string{req.Account.Username})
+		}
+
+		// but we will take it as cn
+		cn = req.Account.GivenName
+	} else {
+		// fallback to username, sn is required for inetorgperson
+		ar.Attribute(s.Config.LDAP.Schema.Surname, []string{req.Account.Username})
+		// fallback to username, we need something to be displayed
+		cn = req.Account.Username
+	}
+	ar.Attribute("cn", []string{cn})
+
+	if req.Account.GivenName != "" {
+		ar.Attribute(s.Config.LDAP.Schema.GivenName, []string{req.Account.GivenName})
+	}
+
+	if req.Account.DisplayName != "" {
+		ar.Attribute(s.Config.LDAP.Schema.DisplayName, []string{req.Account.DisplayName})
+	} else {
+		// reuse cn, we want to see something
+		ar.Attribute(s.Config.LDAP.Schema.DisplayName, []string{cn})
+	}
+	if req.Account.Mail != "" {
+		ar.Attribute(s.Config.LDAP.Schema.Mail, []string{req.Account.Mail})
+	}
+	if req.Account.Description != "" {
+		ar.Attribute(s.Config.LDAP.Schema.Description, []string{req.Account.Description})
+	}
+
+	// add the auxiliary posixclass for username, uid and gid
+	ar.Attribute("objectClass", []string{"posixAccount"})
+
+	ar.Attribute(s.Config.LDAP.Schema.Username, []string{req.Account.Username})
+	ar.Attribute(s.Config.LDAP.Schema.Password, []string{req.Account.Password})
+
+	// TODO roll our own if not set
+	// - we can use one of the 10000 custom ranges of 200000, starting at ... 1000000
+	//     theo docs don't say where the ringes start: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/identity_management_guide/managing-unique_uid_and_gid_attributes
+	//    - we can randomly determine the initial range
+	//    - when creating an account (or group) a uid is chosen from that range
+	//    - when the range is getting full we request a new range?
+	//    - for now leave that to the ldap server ui
+	// TODO prevent collisions
+	// - maintain a custom node that keeps track of the max uid and gid
+	// - when creating a user we can determine the next uid by
+	// - readting the current uid
+	// - sending a modify with
+	// - 1. a delete with the current uid
+	// - 2. an add with the current uid +1
+	// - modify operations either need to all succedd or all fail as of RFC2251
+	// - also see https://www.openldap.org/lists/openldap-software/200110/msg00548.html
+	// - there is an Modify-Increment Extension https://ldapwiki.com/wiki/LDAP%20Modify-Increment%20Extension
+	//   - supported by openldap
+	// - https://ldapwiki.com/wiki/LDIF%20Atomic%20Operations
+	// - openldap has a attribute uniqueness overlay: https://www.openldap.org/doc/admin24/overlays.html#Attribute%20Uniqueness
+	// - or use an external counter
+
+	ar.Attribute(s.Config.LDAP.Schema.UID, []string{strconv.FormatInt(req.Account.Uid, 10)})
+	ar.Attribute(s.Config.LDAP.Schema.GID, []string{strconv.FormatInt(req.Account.Gid, 10)})
+	ar.Attribute("homeDirectory", []string{""}) // TODO we may not get away with an emptystring here
+
+	// groups ara managed using addmember
+
+	err = l.Add(ar)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateAccount implements the AccountsServiceHandler interface
