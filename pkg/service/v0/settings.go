@@ -13,14 +13,18 @@ func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
 		SettingsBundle: &settings.SettingsBundle{
 			Identifier: &settings.Identifier{
 				Extension: "ocis-accounts",
-				BundleKey: "profile",
+				Bundle:    "profile",
 			},
 			DisplayName: "Profile",
 			Settings: []*settings.Setting{
 				{
-					SettingKey:  "language",
+					Name:        "language",
 					DisplayName: "Language",
 					Description: "User language",
+					Resource: &settings.Resource{
+						Type: settings.ResourceType_USER,
+						Id: "me",
+					},
 					Value: &settings.Setting_SingleChoiceValue{
 						SingleChoiceValue: &settings.SingleChoiceListSetting{
 							Options: []*settings.ListOption{
