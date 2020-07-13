@@ -110,7 +110,7 @@ func RegisterSettingsBundles(l *olog.Logger) {
 				Msg("Error registering settings bundle")
 		} else {
 			l.Info().
-				Str("bundle key", res.SettingsBundle.Identifier.BundleKey).
+				Str("bundle key", res.SettingsBundle.Identifier.Bundle).
 				Msg("Successfully registered settings bundle")
 		}
 	}
