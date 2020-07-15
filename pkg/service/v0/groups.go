@@ -220,6 +220,10 @@ func (s Service) CreateGroup(c context.Context, in *proto.CreateGroupRequest, ou
 		return merrors.InternalServerError(s.id, "could not index new group: %v", err.Error())
 	}
 
+	groupsDir := filepath.Join(s.Config.Server.AccountsDataPath, "groups")
+	if err = s.indexGroups(groupsDir); err != nil {
+		return merrors.InternalServerError(s.id, "could not update the index: %v", err.Error())
+	}
 	return
 }
 
@@ -260,6 +264,11 @@ func (s Service) DeleteGroup(c context.Context, in *proto.DeleteGroupRequest, ou
 	if err = s.index.Delete(id); err != nil {
 		s.log.Error().Err(err).Str("id", id).Str("path", path).Msg("could not remove group from index")
 		return merrors.InternalServerError(s.id, "could not remove group from index: %v", err.Error())
+	}
+
+	groupsDir := filepath.Join(s.Config.Server.AccountsDataPath, "groups")
+	if err = s.indexGroups(groupsDir); err != nil {
+		return merrors.InternalServerError(s.id, "could not update the index: %v", err.Error())
 	}
 
 	s.log.Info().Str("id", id).Msg("deleted group")

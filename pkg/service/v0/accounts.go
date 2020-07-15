@@ -295,6 +295,11 @@ func (s Service) CreateAccount(c context.Context, in *proto.CreateAccountRequest
 		return merrors.InternalServerError(s.id, "could not index new account: %v", err.Error())
 	}
 
+	accountsDir := filepath.Join(s.Config.Server.AccountsDataPath, "accounts")
+	if err = s.indexAccounts(accountsDir); err != nil {
+		return merrors.InternalServerError(s.id, "could not update the index: %v", err.Error())
+	}
+
 	return
 }
 
@@ -417,6 +422,11 @@ func (s Service) DeleteAccount(c context.Context, in *proto.DeleteAccountRequest
 	if err = s.index.Delete(id); err != nil {
 		s.log.Error().Err(err).Str("id", id).Str("path", path).Msg("could not remove account from index")
 		return merrors.InternalServerError(s.id, "could not remove account from index: %v", err.Error())
+	}
+
+	accountsDir := filepath.Join(s.Config.Server.AccountsDataPath, "accounts")
+	if err = s.indexAccounts(accountsDir); err != nil {
+		return merrors.InternalServerError(s.id, "could not update the index: %v", err.Error())
 	}
 
 	s.log.Info().Str("id", id).Msg("deleted account")
