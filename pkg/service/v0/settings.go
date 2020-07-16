@@ -6,6 +6,11 @@ import (
 	mclient "github.com/micro/go-micro/v2/client"
 	olog "github.com/owncloud/ocis-pkg/v2/log"
 	settings "github.com/owncloud/ocis-settings/pkg/proto/v0"
+	ssvc "github.com/owncloud/ocis-settings/pkg/service/v0"
+)
+
+const (
+	settingUuidProfileLanguage = "aa8cfbe5-95d4-4f7e-a032-c3c01f5f062f"
 )
 
 // RegisterSettingsBundles pushes the settings bundle definitions for this extension to the ocis-settings service.
@@ -21,9 +26,9 @@ func RegisterSettingsBundles(l *olog.Logger) {
 	for i := range bundleRequests {
 		res, err := service.SaveSettingsBundle(context.Background(), &bundleRequests[i])
 		if err != nil {
-			l.Err(err).Msgf("Error registering settings bundle with id %v", res.SettingsBundle.Id)
+			l.Err(err).Str("bundle", res.SettingsBundle.Id).Msg("Error registering bundle")
 		} else {
-			l.Info().Msgf("Successfully registered settings bundle with id %v", res.SettingsBundle.Id)
+			l.Info().Str("bundle", res.SettingsBundle.Id).Msg("Successfully registered bundle")
 		}
 	}
 
@@ -32,9 +37,9 @@ func RegisterSettingsBundles(l *olog.Logger) {
 		res, err := service.AddSettingToSettingsBundle(context.Background(), &permissionRequests[i])
 		bundleId := permissionRequests[i].BundleId
 		if err != nil {
-			l.Err(err).Msgf("Error adding setting with id %v to bundle with id %v", res.Setting.Id, bundleId)
+			l.Err(err).Str("bundle", bundleId).Str("setting", res.Setting.Id).Msg("Error adding setting to bundle")
 		} else {
-			l.Info().Msgf("Successfully added setting with id %v to bundle with id %v", res.Setting.Id, bundleId)
+			l.Info().Str("bundle", bundleId).Str("setting", res.Setting.Id).Msg("Successfully added setting to bundle")
 		}
 	}
 }
@@ -107,18 +112,18 @@ func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
 		SettingsBundle: &settings.SettingsBundle{
 			Id:        "2a506de7-99bd-4f0d-994e-c38e72c28fd9",
 			Extension: "ocis-accounts",
-			Type:      settings.SettingsBundle_DEFAULT,
+			Type:      settings.SettingsBundle_TYPE_DEFAULT,
 			Resource: &settings.Resource{
-				Type: settings.Resource_SYSTEM,
+				Type: settings.Resource_TYPE_SYSTEM,
 			},
 			DisplayName: "Profile",
 			Settings: []*settings.Setting{
 				{
-					Id:          "aa8cfbe5-95d4-4f7e-a032-c3c01f5f062f",
+					Id:          settingUuidProfileLanguage,
 					DisplayName: "Language",
 					Description: "User language",
 					Resource: &settings.Resource{
-						Type: settings.Resource_SYSTEM,
+						Type: settings.Resource_TYPE_USER,
 					},
 					Value: &languageSetting,
 				},
@@ -132,20 +137,81 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 	// a set of default permissions for the default roles (guest, user, admin).
 	return []settings.AddSettingToSettingsBundleRequest{
 		{
-			BundleId: "71881883-1768-46bd-a24d-a356a2afdf7f", // admin role
+			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
 				Id: "7d81f103-0488-4853-bce5-98dcce36d649",
 				Resource: &settings.Resource{
-					Type: settings.Resource_SETTING,
-					Id:   "aa8cfbe5-95d4-4f7e-a032-c3c01f5f062f", // language setting in profiles bundle
+					Type: settings.Resource_TYPE_SETTING,
+					Id:   settingUuidProfileLanguage,
 				},
 				Value: &settings.Setting_PermissionValue{
 					PermissionValue: &settings.PermissionSetting{
-						Operation: settings.PermissionSetting_UPDATE,
-						Constraint: &settings.Constraint{
-							Type:   settings.Constraint_USER,
-							Values: []string{"me"},
-						},
+						Operation:  settings.PermissionSetting_OPERATION_CREATE,
+						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					},
+				},
+			},
+		},
+		{
+			BundleId: ssvc.BundleUuidRoleAdmin,
+			Setting: &settings.Setting{
+				Id: "04ef2fd3-e724-48f6-a411-129dd461c820",
+				Resource: &settings.Resource{
+					Type: settings.Resource_TYPE_SETTING,
+					Id:   settingUuidProfileLanguage,
+				},
+				Value: &settings.Setting_PermissionValue{
+					PermissionValue: &settings.PermissionSetting{
+						Operation:  settings.PermissionSetting_OPERATION_READ,
+						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					},
+				},
+			},
+		},
+		{
+			BundleId: ssvc.BundleUuidRoleAdmin,
+			Setting: &settings.Setting{
+				Id: "30ac1e63-10e2-4ef8-bf0a-941cd5b56c5c",
+				Resource: &settings.Resource{
+					Type: settings.Resource_TYPE_SETTING,
+					Id:   settingUuidProfileLanguage,
+				},
+				Value: &settings.Setting_PermissionValue{
+					PermissionValue: &settings.PermissionSetting{
+						Operation:  settings.PermissionSetting_OPERATION_UPDATE,
+						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					},
+				},
+			},
+		},
+		{
+			BundleId: ssvc.BundleUuidRoleUser,
+			Setting: &settings.Setting{
+				Id: "dcaeb961-da25-46f2-9892-731603a20d3b",
+				Resource: &settings.Resource{
+					Type: settings.Resource_TYPE_SETTING,
+					Id:   settingUuidProfileLanguage,
+				},
+				Value: &settings.Setting_PermissionValue{
+					PermissionValue: &settings.PermissionSetting{
+						Operation:  settings.PermissionSetting_OPERATION_READ,
+						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					},
+				},
+			},
+		},
+		{
+			BundleId: ssvc.BundleUuidRoleGuest,
+			Setting: &settings.Setting{
+				Id: "ca878636-8b1a-4fae-8282-8617a4c13597",
+				Resource: &settings.Resource{
+					Type: settings.Resource_TYPE_SETTING,
+					Id:   settingUuidProfileLanguage,
+				},
+				Value: &settings.Setting_PermissionValue{
+					PermissionValue: &settings.PermissionSetting{
+						Operation:  settings.PermissionSetting_OPERATION_READ,
+						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
 					},
 				},
 			},
