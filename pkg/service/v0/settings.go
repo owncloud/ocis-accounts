@@ -8,110 +8,147 @@ import (
 	settings "github.com/owncloud/ocis-settings/pkg/proto/v0"
 )
 
-func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
-	return settings.SaveSettingsBundleRequest{
-		SettingsBundle: &settings.SettingsBundle{
-			Identifier: &settings.Identifier{
-				Extension: "ocis-accounts",
-				Bundle:    "profile",
-			},
-			DisplayName: "Profile",
-			Settings: []*settings.Setting{
-				{
-					Name:        "language",
-					DisplayName: "Language",
-					Description: "User language",
-					Resource: &settings.Resource{
-						Type: settings.ResourceType_USER,
-						Id: "me",
-					},
-					Value: &settings.Setting_SingleChoiceValue{
-						SingleChoiceValue: &settings.SingleChoiceListSetting{
-							Options: []*settings.ListOption{
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "cs",
-										},
-									},
-									DisplayValue: "Czech",
-								},
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "de",
-										},
-									},
-									DisplayValue: "Deutsch",
-								},
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "en",
-										},
-									},
-									DisplayValue: "English",
-								},
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "es",
-										},
-									},
-									DisplayValue: "Español",
-								},
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "fr",
-										},
-									},
-									DisplayValue: "Français",
-								},
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "gl",
-										},
-									},
-									DisplayValue: "Galego",
-								},
-								{
-									Value: &settings.ListOptionValue{
-										Option: &settings.ListOptionValue_StringValue{
-											StringValue: "it",
-										},
-									},
-									DisplayValue: "Italiano",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
 // RegisterSettingsBundles pushes the settings bundle definitions for this extension to the ocis-settings service.
 func RegisterSettingsBundles(l *olog.Logger) {
 	// TODO this won't work with a registry other than mdns. Look into Micro's client initialization.
 	// https://github.com/owncloud/ocis-proxy/issues/38
 	service := settings.NewBundleService("com.owncloud.api.settings", mclient.DefaultClient)
 
-	requests := []settings.SaveSettingsBundleRequest{
+	bundleRequests := []settings.SaveSettingsBundleRequest{
 		generateSettingsBundleProfileRequest(),
 	}
 
-	for i := range requests {
-		res, err := service.SaveSettingsBundle(context.Background(), &requests[i])
+	for i := range bundleRequests {
+		res, err := service.SaveSettingsBundle(context.Background(), &bundleRequests[i])
 		if err != nil {
-			l.Err(err).
-				Msg("Error registering settings bundle")
+			l.Err(err).Msgf("Error registering settings bundle with id %v", res.SettingsBundle.Id)
 		} else {
-			l.Info().
-				Str("bundle key", res.SettingsBundle.Identifier.Bundle).
-				Msg("Successfully registered settings bundle")
+			l.Info().Msgf("Successfully registered settings bundle with id %v", res.SettingsBundle.Id)
 		}
+	}
+
+	permissionRequests := generateProfilePermissionsRequests()
+	for i := range permissionRequests {
+		res, err := service.AddSettingToSettingsBundle(context.Background(), &permissionRequests[i])
+		bundleId := permissionRequests[i].BundleId
+		if err != nil {
+			l.Err(err).Msgf("Error adding setting with id %v to bundle with id %v", res.Setting.Id, bundleId)
+		} else {
+			l.Info().Msgf("Successfully added setting with id %v to bundle with id %v", res.Setting.Id, bundleId)
+		}
+	}
+}
+
+var languageSetting = settings.Setting_SingleChoiceValue{
+	SingleChoiceValue: &settings.SingleChoiceListSetting{
+		Options: []*settings.ListOption{
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "cs",
+					},
+				},
+				DisplayValue: "Czech",
+			},
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "de",
+					},
+				},
+				DisplayValue: "Deutsch",
+			},
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "en",
+					},
+				},
+				DisplayValue: "English",
+			},
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "es",
+					},
+				},
+				DisplayValue: "Español",
+			},
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "fr",
+					},
+				},
+				DisplayValue: "Français",
+			},
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "gl",
+					},
+				},
+				DisplayValue: "Galego",
+			},
+			{
+				Value: &settings.ListOptionValue{
+					Option: &settings.ListOptionValue_StringValue{
+						StringValue: "it",
+					},
+				},
+				DisplayValue: "Italiano",
+			},
+		},
+	},
+}
+
+func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
+	return settings.SaveSettingsBundleRequest{
+		SettingsBundle: &settings.SettingsBundle{
+			Id:        "2a506de7-99bd-4f0d-994e-c38e72c28fd9",
+			Extension: "ocis-accounts",
+			Type:      settings.SettingsBundle_DEFAULT,
+			Resource: &settings.Resource{
+				Type: settings.Resource_SYSTEM,
+			},
+			DisplayName: "Profile",
+			Settings: []*settings.Setting{
+				{
+					Id:          "aa8cfbe5-95d4-4f7e-a032-c3c01f5f062f",
+					DisplayName: "Language",
+					Description: "User language",
+					Resource: &settings.Resource{
+						Type: settings.Resource_SYSTEM,
+					},
+					Value: &languageSetting,
+				},
+			},
+		},
+	}
+}
+
+func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleRequest {
+	// TODO: we don't want to set up permissions for settings manually in the future. Instead each setting should come with
+	// a set of default permissions for the default roles (guest, user, admin).
+	return []settings.AddSettingToSettingsBundleRequest{
+		{
+			BundleId: "71881883-1768-46bd-a24d-a356a2afdf7f", // admin role
+			Setting: &settings.Setting{
+				Id: "7d81f103-0488-4853-bce5-98dcce36d649",
+				Resource: &settings.Resource{
+					Type: settings.Resource_SETTING,
+					Id:   "aa8cfbe5-95d4-4f7e-a032-c3c01f5f062f", // language setting in profiles bundle
+				},
+				Value: &settings.Setting_PermissionValue{
+					PermissionValue: &settings.PermissionSetting{
+						Operation: settings.PermissionSetting_UPDATE,
+						Constraint: &settings.Constraint{
+							Type:   settings.Constraint_USER,
+							Values: []string{"me"},
+						},
+					},
+				},
+			},
+		},
 	}
 }
