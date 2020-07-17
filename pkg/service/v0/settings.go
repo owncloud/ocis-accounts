@@ -111,6 +111,7 @@ func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
 	return settings.SaveSettingsBundleRequest{
 		SettingsBundle: &settings.SettingsBundle{
 			Id:        "2a506de7-99bd-4f0d-994e-c38e72c28fd9",
+			Name:      "profile",
 			Extension: "ocis-accounts",
 			Type:      settings.SettingsBundle_TYPE_DEFAULT,
 			Resource: &settings.Resource{
@@ -120,6 +121,7 @@ func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
 			Settings: []*settings.Setting{
 				{
 					Id:          settingUuidProfileLanguage,
+					Name:        "language",
 					DisplayName: "Language",
 					Description: "User language",
 					Resource: &settings.Resource{
@@ -139,7 +141,8 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
-				Id: "7d81f103-0488-4853-bce5-98dcce36d649",
+				Id:   "7d81f103-0488-4853-bce5-98dcce36d649",
+				Name: "language-create",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -155,7 +158,8 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
-				Id: "04ef2fd3-e724-48f6-a411-129dd461c820",
+				Id:   "04ef2fd3-e724-48f6-a411-129dd461c820",
+				Name: "language-read",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -171,7 +175,8 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
-				Id: "30ac1e63-10e2-4ef8-bf0a-941cd5b56c5c",
+				Id:   "30ac1e63-10e2-4ef8-bf0a-941cd5b56c5c",
+				Name: "language-update",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -187,7 +192,8 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleUser,
 			Setting: &settings.Setting{
-				Id: "dcaeb961-da25-46f2-9892-731603a20d3b",
+				Id:   "dcaeb961-da25-46f2-9892-731603a20d3b",
+				Name: "language-read",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -203,7 +209,8 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleGuest,
 			Setting: &settings.Setting{
-				Id: "ca878636-8b1a-4fae-8282-8617a4c13597",
+				Id:   "ca878636-8b1a-4fae-8282-8617a4c13597",
+				Name: "language-read",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
