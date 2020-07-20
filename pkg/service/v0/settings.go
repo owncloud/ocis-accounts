@@ -141,8 +141,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
-				Id:   "7d81f103-0488-4853-bce5-98dcce36d649",
-				Name: "language-create",
+				Id:          "7d81f103-0488-4853-bce5-98dcce36d649",
+				Name:        "language-create",
+				DisplayName: "Permission to set the language",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -158,8 +159,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
-				Id:   "04ef2fd3-e724-48f6-a411-129dd461c820",
-				Name: "language-read",
+				Id:          "04ef2fd3-e724-48f6-a411-129dd461c820",
+				Name:        "language-read",
+				DisplayName: "Permission to read the language",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -175,8 +177,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 		{
 			BundleId: ssvc.BundleUuidRoleAdmin,
 			Setting: &settings.Setting{
-				Id:   "30ac1e63-10e2-4ef8-bf0a-941cd5b56c5c",
-				Name: "language-update",
+				Id:          "30ac1e63-10e2-4ef8-bf0a-941cd5b56c5c",
+				Name:        "language-update",
+				DisplayName: "Permission to update the language",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -194,6 +197,7 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 			Setting: &settings.Setting{
 				Id:   "dcaeb961-da25-46f2-9892-731603a20d3b",
 				Name: "language-read",
+				DisplayName: "Permission to read the language",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
@@ -211,6 +215,7 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 			Setting: &settings.Setting{
 				Id:   "ca878636-8b1a-4fae-8282-8617a4c13597",
 				Name: "language-read",
+				DisplayName: "Permission to read the language",
 				Resource: &settings.Resource{
 					Type: settings.Resource_TYPE_SETTING,
 					Id:   settingUuidProfileLanguage,
