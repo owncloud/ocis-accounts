@@ -26,9 +26,9 @@ func RegisterSettingsBundles(l *olog.Logger) {
 	for i := range bundleRequests {
 		res, err := service.SaveSettingsBundle(context.Background(), &bundleRequests[i])
 		if err != nil {
-			l.Err(err).Str("bundle", res.SettingsBundle.Id).Msg("Error registering bundle")
+			l.Err(err).Str("bundle", res.Bundle.Id).Msg("Error registering bundle")
 		} else {
-			l.Info().Str("bundle", res.SettingsBundle.Id).Msg("Successfully registered bundle")
+			l.Info().Str("bundle", res.Bundle.Id).Msg("Successfully registered bundle")
 		}
 	}
 
@@ -109,7 +109,7 @@ var languageSetting = settings.Setting_SingleChoiceValue{
 
 func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
 	return settings.SaveSettingsBundleRequest{
-		SettingsBundle: &settings.SettingsBundle{
+		Bundle: &settings.SettingsBundle{
 			Id:        "2a506de7-99bd-4f0d-994e-c38e72c28fd9",
 			Name:      "profile",
 			Extension: "ocis-accounts",
