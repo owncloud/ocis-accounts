@@ -19,12 +19,12 @@ func RegisterSettingsBundles(l *olog.Logger) {
 	// https://github.com/owncloud/ocis-proxy/issues/38
 	service := settings.NewBundleService("com.owncloud.api.settings", mclient.DefaultClient)
 
-	bundleRequests := []settings.SaveSettingsBundleRequest{
-		generateSettingsBundleProfileRequest(),
+	bundleRequests := []settings.SaveBundleRequest{
+		generateBundleProfileRequest(),
 	}
 
 	for i := range bundleRequests {
-		res, err := service.SaveSettingsBundle(context.Background(), &bundleRequests[i])
+		res, err := service.SaveBundle(context.Background(), &bundleRequests[i])
 		if err != nil {
 			l.Err(err).Str("bundle", res.Bundle.Id).Msg("Error registering bundle")
 		} else {
@@ -34,7 +34,7 @@ func RegisterSettingsBundles(l *olog.Logger) {
 
 	permissionRequests := generateProfilePermissionsRequests()
 	for i := range permissionRequests {
-		res, err := service.AddSettingToSettingsBundle(context.Background(), &permissionRequests[i])
+		res, err := service.AddSettingToBundle(context.Background(), &permissionRequests[i])
 		bundleId := permissionRequests[i].BundleId
 		if err != nil {
 			l.Err(err).Str("bundle", bundleId).Str("setting", res.Setting.Id).Msg("Error adding setting to bundle")
@@ -45,7 +45,7 @@ func RegisterSettingsBundles(l *olog.Logger) {
 }
 
 var languageSetting = settings.Setting_SingleChoiceValue{
-	SingleChoiceValue: &settings.SingleChoiceListSetting{
+	SingleChoiceValue: &settings.SingleChoiceList{
 		Options: []*settings.ListOption{
 			{
 				Value: &settings.ListOptionValue{
@@ -107,13 +107,13 @@ var languageSetting = settings.Setting_SingleChoiceValue{
 	},
 }
 
-func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
-	return settings.SaveSettingsBundleRequest{
-		Bundle: &settings.SettingsBundle{
+func generateBundleProfileRequest() settings.SaveBundleRequest {
+	return settings.SaveBundleRequest{
+		Bundle: &settings.Bundle{
 			Id:        "2a506de7-99bd-4f0d-994e-c38e72c28fd9",
 			Name:      "profile",
 			Extension: "ocis-accounts",
-			Type:      settings.SettingsBundle_TYPE_DEFAULT,
+			Type:      settings.Bundle_TYPE_DEFAULT,
 			Resource: &settings.Resource{
 				Type: settings.Resource_TYPE_SYSTEM,
 			},
@@ -134,10 +134,10 @@ func generateSettingsBundleProfileRequest() settings.SaveSettingsBundleRequest {
 	}
 }
 
-func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleRequest {
+func generateProfilePermissionsRequests() []settings.AddSettingToBundleRequest {
 	// TODO: we don't want to set up permissions for settings manually in the future. Instead each setting should come with
 	// a set of default permissions for the default roles (guest, user, admin).
-	return []settings.AddSettingToSettingsBundleRequest{
+	return []settings.AddSettingToBundleRequest{
 		{
 			BundleId: ssvc.BundleUUIDRoleAdmin,
 			Setting: &settings.Setting{
@@ -149,9 +149,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 					Id:   settingUuidProfileLanguage,
 				},
 				Value: &settings.Setting_PermissionValue{
-					PermissionValue: &settings.PermissionSetting{
-						Operation:  settings.PermissionSetting_OPERATION_CREATE,
-						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					PermissionValue: &settings.Permission{
+						Operation:  settings.Permission_OPERATION_CREATE,
+						Constraint: settings.Permission_CONSTRAINT_OWN,
 					},
 				},
 			},
@@ -167,9 +167,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 					Id:   settingUuidProfileLanguage,
 				},
 				Value: &settings.Setting_PermissionValue{
-					PermissionValue: &settings.PermissionSetting{
-						Operation:  settings.PermissionSetting_OPERATION_READ,
-						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					PermissionValue: &settings.Permission{
+						Operation:  settings.Permission_OPERATION_READ,
+						Constraint: settings.Permission_CONSTRAINT_OWN,
 					},
 				},
 			},
@@ -185,9 +185,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 					Id:   settingUuidProfileLanguage,
 				},
 				Value: &settings.Setting_PermissionValue{
-					PermissionValue: &settings.PermissionSetting{
-						Operation:  settings.PermissionSetting_OPERATION_UPDATE,
-						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					PermissionValue: &settings.Permission{
+						Operation:  settings.Permission_OPERATION_UPDATE,
+						Constraint: settings.Permission_CONSTRAINT_OWN,
 					},
 				},
 			},
@@ -203,9 +203,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 					Id:   settingUuidProfileLanguage,
 				},
 				Value: &settings.Setting_PermissionValue{
-					PermissionValue: &settings.PermissionSetting{
-						Operation:  settings.PermissionSetting_OPERATION_READ,
-						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					PermissionValue: &settings.Permission{
+						Operation:  settings.Permission_OPERATION_READ,
+						Constraint: settings.Permission_CONSTRAINT_OWN,
 					},
 				},
 			},
@@ -221,9 +221,9 @@ func generateProfilePermissionsRequests() []settings.AddSettingToSettingsBundleR
 					Id:   settingUuidProfileLanguage,
 				},
 				Value: &settings.Setting_PermissionValue{
-					PermissionValue: &settings.PermissionSetting{
-						Operation:  settings.PermissionSetting_OPERATION_READ,
-						Constraint: settings.PermissionSetting_CONSTRAINT_OWN,
+					PermissionValue: &settings.Permission{
+						Operation:  settings.Permission_OPERATION_READ,
+						Constraint: settings.Permission_CONSTRAINT_OWN,
 					},
 				},
 			},
