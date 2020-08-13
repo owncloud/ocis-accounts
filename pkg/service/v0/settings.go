@@ -26,7 +26,7 @@ func RegisterSettingsBundles(l *olog.Logger) {
 	for i := range bundleRequests {
 		res, err := service.SaveBundle(context.Background(), &bundleRequests[i])
 		if err != nil {
-			l.Err(err).Str("bundle", res.Bundle.Id).Msg("Error registering bundle")
+			l.Err(err).Str("bundle", bundleRequests[i].Bundle.Id).Msg("Error registering bundle")
 		} else {
 			l.Info().Str("bundle", res.Bundle.Id).Msg("Successfully registered bundle")
 		}
@@ -37,7 +37,7 @@ func RegisterSettingsBundles(l *olog.Logger) {
 		res, err := service.AddSettingToBundle(context.Background(), &permissionRequests[i])
 		bundleId := permissionRequests[i].BundleId
 		if err != nil {
-			l.Err(err).Str("bundle", bundleId).Str("setting", res.Setting.Id).Msg("Error adding setting to bundle")
+			l.Err(err).Str("bundle", bundleId).Str("setting", permissionRequests[i].Setting.Id).Msg("Error adding setting to bundle")
 		} else {
 			l.Info().Str("bundle", bundleId).Str("setting", res.Setting.Id).Msg("Successfully added setting to bundle")
 		}
