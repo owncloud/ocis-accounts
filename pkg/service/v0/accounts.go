@@ -2,9 +2,7 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,7 +32,6 @@ import (
 	_ "github.com/tredoe/osutil/user/crypt/sha512_crypt"
 )
 
-// accLock mutually exclude readers from writers on account files
 var accLock sync.Mutex
 
 func (s Service) indexAccounts(path string) (err error) {
@@ -63,7 +60,7 @@ func (s Service) indexAccount(id string) error {
 	a := &proto.BleveAccount{
 		BleveType: "account",
 	}
-	if err := s.loadAccount(id, &a.Account); err != nil {
+	if err := s.repo.LoadAccount(id, &a.Account); err != nil {
 		s.log.Error().Err(err).Str("account", id).Msg("could not load account")
 		return err
 	}
@@ -79,37 +76,6 @@ func (s Service) indexAccount(id string) error {
 // login eq \"teddy\" and password eq \"F&1!b90t111!\"
 var authQuery = regexp.MustCompile(`^login eq '(.*)' and password eq '(.*)'$`) // TODO how is ' escaped in the password?
 
-func (s Service) loadAccount(id string, a *proto.Account) (err error) {
-	path := filepath.Join(s.Config.Server.AccountsDataPath, "accounts", id)
-
-	var data []byte
-	if data, err = ioutil.ReadFile(path); err != nil {
-		return merrors.NotFound(s.id, "could not read account: %v", err.Error())
-	}
-
-	if err = json.Unmarshal(data, a); err != nil {
-		return merrors.InternalServerError(s.id, "could not unmarshal account: %v", err.Error())
-	}
-	return
-}
-
-func (s Service) writeAccount(a *proto.Account) (err error) {
-	// leave only the group id
-	s.deflateMemberOf(a)
-
-	var bytes []byte
-	if bytes, err = json.Marshal(a); err != nil {
-		return merrors.InternalServerError(s.id, "could not marshal account: %v", err.Error())
-	}
-
-	path := filepath.Join(s.Config.Server.AccountsDataPath, "accounts", a.Id)
-
-	if err = ioutil.WriteFile(path, bytes, 0600); err != nil {
-		return merrors.InternalServerError(s.id, "could not write account: %v", err.Error())
-	}
-	return
-}
-
 func (s Service) expandMemberOf(a *proto.Account) {
 	if a == nil {
 		return
@@ -118,7 +84,7 @@ func (s Service) expandMemberOf(a *proto.Account) {
 	for i := range a.MemberOf {
 		g := &proto.Group{}
 		// TODO resolve by name, when a create or update is issued they may not have an id? fall back to searching the group id in the index?
-		if err := s.loadGroup(a.MemberOf[i].Id, g); err == nil {
+		if err := s.repo.LoadGroup(a.MemberOf[i].Id, g); err == nil {
 			g.Members = nil // always hide members when expanding
 			expanded = append(expanded, g)
 		} else {
@@ -127,23 +93,6 @@ func (s Service) expandMemberOf(a *proto.Account) {
 		}
 	}
 	a.MemberOf = expanded
-}
-
-// deflateMemberOf replaces the groups of a user with an instance that only contains the id
-func (s Service) deflateMemberOf(a *proto.Account) {
-	if a == nil {
-		return
-	}
-	deflated := []*proto.Group{}
-	for i := range a.MemberOf {
-		if a.MemberOf[i].Id != "" {
-			deflated = append(deflated, &proto.Group{Id: a.MemberOf[i].Id})
-		} else {
-			// TODO fetch and use an id when group only has a name but no id
-			s.log.Error().Str("id", a.Id).Interface("group", a.MemberOf[i]).Msg("resolving groups by name is not implemented yet")
-		}
-	}
-	a.MemberOf = deflated
 }
 
 func (s Service) passwordIsValid(hash string, pwd string) (ok bool) {
@@ -268,7 +217,7 @@ func (s Service) ListAccounts(ctx context.Context, in *proto.ListAccountsRequest
 
 	for _, hit := range searchResult.Hits {
 		a := &proto.Account{}
-		if err = s.loadAccount(hit.ID, a); err != nil {
+		if err = s.repo.LoadAccount(hit.ID, a); err != nil {
 			s.log.Error().Err(err).Str("account", hit.ID).Msg("could not load account, skipping")
 			continue
 		}
@@ -316,7 +265,7 @@ func (s Service) GetAccount(ctx context.Context, in *proto.GetAccountRequest, ou
 		return merrors.InternalServerError(s.id, "could not clean up account id: %v", err.Error())
 	}
 
-	if err = s.loadAccount(id, out); err != nil {
+	if err = s.repo.LoadAccount(id, out); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}
@@ -389,7 +338,7 @@ func (s Service) CreateAccount(ctx context.Context, in *proto.CreateAccountReque
 	// TODO groups should be ignored during create, use groups.AddMember? return error?
 
 	// write and index account - note: don't do anything else in between!
-	if err = s.writeAccount(acc); err != nil {
+	if err = s.repo.WriteAccount(acc); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not persist new account")
 		s.debugLogAccount(acc).Msg("could not persist new account")
 		return
@@ -450,7 +399,7 @@ func (s Service) UpdateAccount(ctx context.Context, in *proto.UpdateAccountReque
 
 	path := filepath.Join(s.Config.Server.AccountsDataPath, "accounts", id)
 
-	if err = s.loadAccount(id, out); err != nil {
+	if err = s.repo.LoadAccount(id, out); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}
@@ -504,7 +453,7 @@ func (s Service) UpdateAccount(ctx context.Context, in *proto.UpdateAccountReque
 		out.ExternalUserStateChangeDateTime = tsnow
 	}
 
-	if err = s.writeAccount(out); err != nil {
+	if err = s.repo.WriteAccount(out); err != nil {
 		s.log.Error().Err(err).Str("id", out.Id).Msg("could not persist updated account")
 		return
 	}
@@ -556,7 +505,7 @@ func (s Service) DeleteAccount(ctx context.Context, in *proto.DeleteAccountReque
 	path := filepath.Join(s.Config.Server.AccountsDataPath, "accounts", id)
 
 	a := &proto.Account{}
-	if err = s.loadAccount(id, a); err != nil {
+	if err = s.repo.LoadAccount(id, a); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}

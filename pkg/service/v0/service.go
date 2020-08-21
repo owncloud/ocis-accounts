@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/owncloud/ocis-accounts/pkg/storage"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -393,6 +394,52 @@ func assignRoleToUser(accountID, roleID string, rs settings.RoleService, logger 
 	if err != nil {
 		logger.Error().Err(err).Str("accountID", accountID).Str("roleID", roleID).Msg("could not set role for account")
 		return false
+		return nil, err
+	}
+	lowercaseTextFieldMapping := bleve.NewTextFieldMapping()
+	lowercaseTextFieldMapping.Analyzer = "lowercase"
+	lowercaseTextFieldMapping.Store = true
+
+	// accounts
+	accountMapping := bleve.NewDocumentMapping()
+	indexMapping.AddDocumentMapping("account", accountMapping)
+
+	// Text
+	accountMapping.AddFieldMappingsAt("display_name", standardTextFieldMapping)
+	accountMapping.AddFieldMappingsAt("description", standardTextFieldMapping)
+
+	// Lowercase
+	accountMapping.AddFieldMappingsAt("on_premises_sam_account_name", lowercaseTextFieldMapping)
+	accountMapping.AddFieldMappingsAt("preferred_name", lowercaseTextFieldMapping)
+
+	// Keywords
+	accountMapping.AddFieldMappingsAt("mail", keywordFieldMapping)
+
+	// groups
+	groupMapping := bleve.NewDocumentMapping()
+	indexMapping.AddDocumentMapping("group", groupMapping)
+
+	// Text
+	groupMapping.AddFieldMappingsAt("display_name", standardTextFieldMapping)
+	groupMapping.AddFieldMappingsAt("description", standardTextFieldMapping)
+
+	// Lowercase
+	groupMapping.AddFieldMappingsAt("on_premises_sam_account_name", lowercaseTextFieldMapping)
+
+	// Tell blevesearch how to determine the type of the structs that are indexed.
+	// The referenced field needs to match the struct field exactly and it must be public.
+	// See pkg/proto/v0/bleve.go how we wrap the generated Account and Group to add a
+	// BleveType property which is indexed as `bleve_type` so we can also distinguish the
+	// documents in the index by querying for that property.
+	indexMapping.TypeField = "BleveType"
+
+	serviceID := cfg.GRPC.Namespace + "." + cfg.Server.Name
+	s = &Service{
+		id:     serviceID,
+		log:    logger,
+		Config: cfg,
+		index:  nil,
+		repo:   storage.New(serviceID, cfg.Server.AccountsDataPath, logger.Logger),
 	}
 	return true
 }
@@ -405,6 +452,7 @@ type Service struct {
 	index       bleve.Index
 	RoleService settings.RoleService
 	RoleManager *roles.Manager
+	repo   storage.Repo
 }
 
 func cleanupID(id string) (string, error) {
