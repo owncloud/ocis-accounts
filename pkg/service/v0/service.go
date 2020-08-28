@@ -1,5 +1,7 @@
 package service
 
+//go:generate moq -out ../../proto/v0/accounts.moq.go ../../proto/v0 AccountsService
+
 import (
 	"context"
 	"encoding/json"

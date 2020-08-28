@@ -23,7 +23,7 @@ endif
 
 PACKAGES ?= $(shell go list ./...)
 SOURCES ?= $(shell find . -name "*.go" -type f -not -path "./node_modules/*")
-GENERATE ?= $(IMPORT)/pkg/assets
+GENERATE ?= $(IMPORT)/pkg/assets $(IMPORT)/pkg/service/v0
 
 FEATURE_PATH ?= "ui/tests/acceptance/features"
 
@@ -81,7 +81,7 @@ lint:
 	for PKG in $(PACKAGES); do go run golang.org/x/lint/golint -set_exit_status $$PKG || exit 1; done;
 
 .PHONY: generate
-generate: protobuf
+generate: assets protobuf $(GOPATH)/bin/moq
 	go generate $(GENERATE)
 
 .PHONY: changelog
@@ -104,6 +104,12 @@ $(BIN)/$(EXECUTABLE): $(SOURCES)
 
 $(BIN)/$(EXECUTABLE)-debug: $(SOURCES)
 	$(GOBUILD) -v -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -gcflags '$(GCFLAGS)' -o $@ ./cmd/$(NAME)
+
+node_modules:
+	yarn install
+
+assets: node_modules
+	yarn build
 
 .PHONY: release
 release: release-dirs release-linux release-windows release-darwin release-copy release-check
@@ -173,6 +179,9 @@ $(GOPATH)/bin/protoc-gen-microweb:
 
 $(GOPATH)/bin/protoc-gen-swagger:
 	GO111MODULE=off go get -v github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+
+$(GOPATH)/bin/moq:
+	GO111MODULE=off go get -v github.com/matryer/moq
 
 $(PROTO_SRC)/accounts.pb.go: $(PROTO_SRC)/accounts.proto
 	protoc \
