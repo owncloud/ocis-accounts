@@ -1,11 +1,14 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	mclient "github.com/micro/go-micro/v2/client"
 	mgrpc "github.com/micro/go-micro/v2/client/grpc"
+	settings "github.com/owncloud/ocis-settings/pkg/proto/v0"
+	settings_svc "github.com/owncloud/ocis-settings/pkg/service/v0"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -134,6 +137,8 @@ func New(opts ...Option) (s *Service, err error) {
 						},
 					},
 				}
+
+				rs := settings.NewRoleService("com.owncloud.api.settings", mgrpc.NewClient())
 				for i := range accounts {
 					var bytes []byte
 					if bytes, err = json.Marshal(&accounts[i]); err != nil {
@@ -146,6 +151,23 @@ func New(opts ...Option) (s *Service, err error) {
 						logger.Error().Err(err).Str("path", path).Interface("account", &accounts[i]).Msg("could not persist default account")
 						return
 					}
+
+					// Give admin-permissions to system accounts
+					if accounts[i].PreferredName == "reva" || accounts[i].PreferredName == "konnectd" {
+						_, err = rs.AssignRoleToUser(context.Background(), &settings.AssignRoleToUserRequest{
+							AccountUuid: accounts[i].Id,
+							RoleId:      settings_svc.BundleUUIDRoleAdmin,
+						})
+
+						if err != nil {
+							accounts[i].PasswordProfile.Password = "***REMOVED***"
+							logger.Error().Err(err).Str("path", path).Interface("account", &accounts[i]).Msg("could not set role for account")
+							return
+
+						}
+
+					}
+
 				}
 			}
 		} else if !fi.IsDir() {
