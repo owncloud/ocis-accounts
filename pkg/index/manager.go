@@ -1,51 +1,67 @@
+// Package index provides symlink-based index for on-disk document-directories.
 package index
 
 import (
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
-	"os"
 	"path"
 	"reflect"
 )
 
+// Manager is a facade to configure and query over multiple indices.
 type Manager struct {
-	config  *ManagerConfig
-	indices indexMap
+	config    *ManagerConfig
+	indices   indexMap
+	typeToDir map[string]string
 }
 
 type ManagerConfig struct {
 	DataDir          string
 	IndexRootDirName string
 	Log              zerolog.Logger
-	open             bool
 }
 
+// Index can be implemented to create new index-strategies. See Unique for example.
+// Each index implementation is bound to one data-column (IndexBy) and a data-type (TypeName)
 type Index interface {
-	Lookup(v string) (string, error)
+	Lookup(v string) (pk string, err error)
 	Add(pk, v string) error
-	EntryRemoved(pk, v string)
+	Remove(v string) error
+	Update(oldV, newV string) error
 	IndexBy() string
 	TypeName() string
+	FilesDir() string
 	Init() error
 }
 
-func Start(cfg *ManagerConfig, indices ...Index) (*Manager, error) {
-	err := os.MkdirAll(path.Join(cfg.DataDir, cfg.IndexRootDirName), 0777)
-	if err != nil {
-		return nil, err
+func NewManager(cfg *ManagerConfig) *Manager {
+	return &Manager{
+		config:    cfg,
+		indices:   indexMap{},
+		typeToDir: map[string]string{},
 	}
-	m := &Manager{config: cfg, indices: indexMap{}}
-	for _, idx := range indices {
-		m.indices.addIndex(idx)
-		if err := idx.Init(); err != nil {
-			return nil, err
-		}
-	}
-
-	return m, nil
 }
 
+func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error {
+	fullDataPath := path.Join(man.config.DataDir, entityDirName)
+	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
+
+	idx := NewUniqueIndex(typeName, indexBy, fullDataPath, indexPath)
+	man.indices.addIndex(idx)
+	man.typeToDir[idx.typeName] = fullDataPath
+
+	return idx.Init()
+}
+
+func (man Manager) AddIndex(idx Index) error {
+	man.indices.addIndex(idx)
+	man.typeToDir[idx.TypeName()] = idx.FilesDir()
+
+	return idx.Init()
+}
+
+// Add a new entry to the index
 func (man Manager) Add(primaryKey string, entity interface{}) error {
 	t, err := getType(entity)
 	if err != nil {
@@ -73,25 +89,32 @@ func (man Manager) Add(primaryKey string, entity interface{}) error {
 	return nil
 }
 
-func (man Manager) Find(typeName, field, value string) (string, error) {
-	if indices, ok := man.indices[typeName][field]; ok {
+// Find a entry by type,field and value.
+//  // Find a User type by email
+//  man.Find("User", "Email", "foo@example.com")
+func (man Manager) Find(typeName, key, value string) (pk string, err error) {
+	if indices, ok := man.indices[typeName][key]; ok {
 		for _, idx := range indices {
-			pk, err := idx.Lookup(value)
-			if err != nil {
-				return "", err
+			if pk, err = idx.Lookup(value); IsNotFoundErr(err) {
+				continue
 			}
 
-			return pk, nil
+			if err != nil {
+				return
+			}
 		}
 	}
 
-	return "", errors.New("not found")
+	if pk == "" {
+		return
+	}
 
+	return path.Base(pk), err
 }
 
 // indexMap holds the index-configuration
-type indexMap map[typeName]map[indexByKey][]Index
-type typeName = string
+type indexMap map[tName]map[indexByKey][]Index
+type tName = string
 type indexByKey = string
 
 func (m indexMap) addIndex(idx Index) {
@@ -113,4 +136,11 @@ func getType(v interface{}) (reflect.Value, error) {
 	}
 
 	return rv, nil
+}
+
+func getValueOf(v interface{}, field string) string {
+	r := reflect.ValueOf(v)
+	f := reflect.Indirect(r).FieldByName(field)
+
+	return f.String()
 }
