@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
+	"io/ioutil"
+	"os"
 	"path"
 	"reflect"
 )
@@ -13,7 +15,7 @@ import (
 type Manager struct {
 	config    *ManagerConfig
 	indices   indexMap
-	typeToDir map[string]string
+	typeToDir map[string]diskMap
 }
 
 type ManagerConfig struct {
@@ -25,21 +27,22 @@ type ManagerConfig struct {
 // Index can be implemented to create new index-strategies. See Unique for example.
 // Each index implementation is bound to one data-column (IndexBy) and a data-type (TypeName)
 type Index interface {
-	Lookup(v string) (pk string, err error)
+	Init() error
+	Lookup(v string) (string, error)
 	Add(pk, v string) error
 	Remove(v string) error
 	Update(oldV, newV string) error
 	IndexBy() string
 	TypeName() string
 	FilesDir() string
-	Init() error
+	BacklinksDir() string
 }
 
 func NewManager(cfg *ManagerConfig) *Manager {
 	return &Manager{
 		config:    cfg,
 		indices:   indexMap{},
-		typeToDir: map[string]string{},
+		typeToDir: map[string]diskMap{},
 	}
 }
 
@@ -49,14 +52,17 @@ func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error
 
 	idx := NewUniqueIndex(typeName, indexBy, fullDataPath, indexPath)
 	man.indices.addIndex(idx)
-	man.typeToDir[idx.typeName] = fullDataPath
+	man.typeToDir[idx.typeName] = diskMap{
+		filesDirPath:     fullDataPath,
+		backlinksDirPath: idx.backlinkDir,
+	}
 
 	return idx.Init()
 }
 
 func (man Manager) AddIndex(idx Index) error {
 	man.indices.addIndex(idx)
-	man.typeToDir[idx.TypeName()] = idx.FilesDir()
+	man.typeToDir[idx.TypeName()] = diskMap{idx.FilesDir(), idx.BacklinksDir()}
 
 	return idx.Init()
 }
@@ -110,6 +116,51 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 	}
 
 	return path.Base(pk), err
+}
+
+func (man Manager) Delete(typeName, pk string) error {
+	if dm, ok := man.typeToDir[typeName]; ok {
+		entityBacklinksDir := path.Join(dm.backlinksDirPath, pk)
+		fi, err := os.Stat(entityBacklinksDir)
+		if os.IsNotExist(err) {
+			return &notFoundErr{typeName, "_PRIMARY_", pk}
+		}
+
+		if !fi.IsDir() {
+			return fmt.Errorf("%s is supposed to be a directory (corruption/bug?)", fi.Name())
+		}
+
+		blInfos, err := ioutil.ReadDir(entityBacklinksDir)
+		if err != nil {
+			return err
+		}
+
+		for _, blInfo := range blInfos {
+			blPath := path.Join(entityBacklinksDir, blInfo.Name())
+			if err := isValidSymlink(blPath); err != nil {
+				return err
+			}
+
+			origPath, err := os.Readlink(blPath)
+			if err != nil {
+				return err
+			}
+
+			if err := os.Remove(blPath); err != nil {
+				return err
+			}
+
+			if err := os.Remove(origPath); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+type diskMap struct {
+	filesDirPath, backlinksDirPath string
 }
 
 // indexMap holds the index-configuration

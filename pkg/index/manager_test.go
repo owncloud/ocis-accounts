@@ -55,3 +55,32 @@ func TestManagerQueryMultipleIndices(t *testing.T) {
 
 	_ = os.RemoveAll(dataDir)
 }
+
+func TestManagerDelete(t *testing.T) {
+	dataDir := writeIndexTestData(t, testData, "Id")
+	man := NewManager(&ManagerConfig{
+		DataDir:          dataDir,
+		IndexRootDirName: "index.disk",
+		Log:              zerolog.Logger{},
+	})
+
+	err := man.AddUniqueIndex("User", "Email", "users")
+	assert.NoError(t, err)
+
+	err = man.AddUniqueIndex("User", "UserName", "users")
+	assert.NoError(t, err)
+
+	err = man.AddUniqueIndex("TestPet", "Color", "pets")
+	assert.NoError(t, err)
+
+	for path := range testData {
+		for _, entity := range testData[path] {
+			err := man.Add(getValueOf(entity, "Id"), entity)
+			assert.NoError(t, err)
+		}
+	}
+
+	err = man.Delete("User", "hijklmn-456")
+	t.Log(err)
+
+}

@@ -11,7 +11,9 @@ type Unique struct {
 	indexBy      string
 	typeName     string
 	filesDir     string
+	indexBaseDir string
 	indexRootDir string
+	backlinkDir  string
 }
 
 // NewUniqueIndex instantiates a new UniqueIndex instance. Init() should be
@@ -21,7 +23,9 @@ func NewUniqueIndex(typeName, indexBy, filesDir, indexBaseDir string) Unique {
 		indexBy:      indexBy,
 		typeName:     typeName,
 		filesDir:     filesDir,
+		indexBaseDir: indexBaseDir,
 		indexRootDir: path.Join(indexBaseDir, fmt.Sprintf("%sBy%s", typeName, indexBy)),
+		backlinkDir:  path.Join(indexBaseDir, fmt.Sprintf("%sBacklinks", typeName)),
 	}
 }
 
@@ -34,17 +38,27 @@ func (idx Unique) Init() error {
 		return err
 	}
 
+	if err := os.MkdirAll(idx.backlinkDir, 0777); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (idx Unique) Add(pk, v string) error {
-	oldName, newName := path.Join(idx.filesDir, pk), path.Join(idx.indexRootDir, v)
+	oldName := path.Join(idx.filesDir, pk)
+	newName := path.Join(idx.indexRootDir, v)
 	err := os.Symlink(oldName, newName)
 	if errors.Is(err, os.ErrExist) {
 		return &alreadyExistsErr{idx.typeName, idx.indexBy, v}
 	}
 
-	return err
+	blPath := path.Join(idx.backlinkDir, pk)
+	if err := os.MkdirAll(blPath, 0777); err != nil {
+		return err
+	}
+
+	return os.Symlink(newName, path.Join(blPath, v))
 }
 
 func (idx Unique) Remove(v string) (err error) {
@@ -101,6 +115,11 @@ func (idx Unique) TypeName() string {
 
 func (idx Unique) FilesDir() string {
 	return idx.filesDir
+}
+
+func (idx Unique) BacklinksDir() string {
+	return idx.backlinkDir
+
 }
 
 func isValidSymlink(path string) (err error) {
