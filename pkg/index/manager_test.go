@@ -16,10 +16,16 @@ func TestManagerQueryMultipleIndices(t *testing.T) {
 		Log:              zerolog.Logger{},
 	})
 
-	err := man.AddUniqueIndex("User", "Email", "users")
+	err := man.AddPrimaryIndex("User", "users")
+	assert.NoError(t, err)
+
+	err = man.AddUniqueIndex("User", "Email", "users")
 	assert.NoError(t, err)
 
 	err = man.AddUniqueIndex("User", "UserName", "users")
+	assert.NoError(t, err)
+
+	err = man.AddPrimaryIndex("TestPet", "pets")
 	assert.NoError(t, err)
 
 	err = man.AddUniqueIndex("TestPet", "Color", "pets")
@@ -64,10 +70,16 @@ func TestManagerDelete(t *testing.T) {
 		Log:              zerolog.Logger{},
 	})
 
-	err := man.AddUniqueIndex("User", "Email", "users")
+	err := man.AddPrimaryIndex("User", "users")
+	assert.NoError(t, err)
+
+	err = man.AddUniqueIndex("User", "Email", "users")
 	assert.NoError(t, err)
 
 	err = man.AddUniqueIndex("User", "UserName", "users")
+	assert.NoError(t, err)
+
+	err = man.AddPrimaryIndex("TestPet", "pets")
 	assert.NoError(t, err)
 
 	err = man.AddUniqueIndex("TestPet", "Color", "pets")

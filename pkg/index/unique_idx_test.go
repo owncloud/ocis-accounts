@@ -30,7 +30,7 @@ func TestUniqueLookupSingleEntry(t *testing.T) {
 func TestUniqueUniqueConstraint(t *testing.T) {
 	uniq, dataDir := getUniqueIdxSut(t)
 
-	err := uniq.Add("abcdefg-123", "mikey@example.com")
+	_, err := uniq.Add("abcdefg-123", "mikey@example.com")
 	assert.Error(t, err)
 	assert.IsType(t, &alreadyExistsErr{}, err)
 
@@ -105,7 +105,7 @@ func getUniqueIdxSut(t *testing.T) (sut Index, dataPath string) {
 	for _, u := range testData["users"] {
 		pkVal := getValueOf(u, "Id")
 		idxByVal := getValueOf(u, "Email")
-		err := sut.Add(pkVal, idxByVal)
+		_, err := sut.Add(pkVal, idxByVal)
 		if err != nil {
 			t.Fatal(err)
 		}

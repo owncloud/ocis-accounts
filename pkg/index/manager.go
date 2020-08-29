@@ -5,17 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
-	"io/ioutil"
-	"os"
 	"path"
 	"reflect"
 )
 
 // Manager is a facade to configure and query over multiple indices.
 type Manager struct {
-	config    *ManagerConfig
-	indices   indexMap
-	typeToDir map[string]diskMap
+	config         *ManagerConfig
+	indices        indexMap
+	typeToDir      map[string]diskMap
+	primaryIndices map[string]primaryIndex
 }
 
 type ManagerConfig struct {
@@ -29,21 +28,34 @@ type ManagerConfig struct {
 type Index interface {
 	Init() error
 	Lookup(v string) (string, error)
-	Add(pk, v string) error
+	Add(pk, v string) (string, error)
 	Remove(v string) error
 	Update(oldV, newV string) error
 	IndexBy() string
 	TypeName() string
 	FilesDir() string
-	BacklinksDir() string
 }
 
 func NewManager(cfg *ManagerConfig) *Manager {
 	return &Manager{
-		config:    cfg,
-		indices:   indexMap{},
-		typeToDir: map[string]diskMap{},
+		config:         cfg,
+		indices:        indexMap{},
+		typeToDir:      map[string]diskMap{},
+		primaryIndices: map[string]primaryIndex{},
 	}
+}
+
+func (man Manager) AddPrimaryIndex(typeName, entityDirName string) error {
+	fullDataPath := path.Join(man.config.DataDir, entityDirName)
+	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
+	man.primaryIndices[typeName] = primaryIndex{
+		typeName: typeName,
+		indexDir: path.Join(indexPath, fmt.Sprintf("%sPrimary", typeName)),
+		dataPath: fullDataPath,
+	}
+
+	return man.primaryIndices[typeName].init()
+
 }
 
 func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error {
@@ -52,17 +64,12 @@ func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error
 
 	idx := NewUniqueIndex(typeName, indexBy, fullDataPath, indexPath)
 	man.indices.addIndex(idx)
-	man.typeToDir[idx.typeName] = diskMap{
-		filesDirPath:     fullDataPath,
-		backlinksDirPath: idx.backlinkDir,
-	}
 
 	return idx.Init()
 }
 
 func (man Manager) AddIndex(idx Index) error {
 	man.indices.addIndex(idx)
-	man.typeToDir[idx.TypeName()] = diskMap{idx.FilesDir(), idx.BacklinksDir()}
 
 	return idx.Init()
 }
@@ -74,7 +81,9 @@ func (man Manager) Add(primaryKey string, entity interface{}) error {
 		return err
 	}
 
-	if typeIndices, ok := man.indices[t.Type().Name()]; ok {
+	typeName := t.Type().Name()
+
+	if typeIndices, ok := man.indices[typeName]; ok {
 		for fieldName, fieldIndices := range typeIndices {
 			for k := range fieldIndices {
 				curIdx := fieldIndices[k]
@@ -84,10 +93,19 @@ func (man Manager) Add(primaryKey string, entity interface{}) error {
 					return fmt.Errorf("the indexBy-name of an index on %v does not exist", fieldName)
 				}
 
-				err := curIdx.Add(primaryKey, f.String())
+				val := f.String()
+				created, err := curIdx.Add(primaryKey, val)
 				if err != nil {
 					return err
 				}
+
+				if priIdx, ok := man.primaryIndices[typeName]; ok {
+					err := priIdx.add(primaryKey, val, created)
+					if err != nil {
+						return err
+					}
+				}
+
 			}
 		}
 	}
@@ -119,44 +137,15 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 }
 
 func (man Manager) Delete(typeName, pk string) error {
-	if dm, ok := man.typeToDir[typeName]; ok {
-		entityBacklinksDir := path.Join(dm.backlinksDirPath, pk)
-		fi, err := os.Stat(entityBacklinksDir)
-		if os.IsNotExist(err) {
-			return &notFoundErr{typeName, "_PRIMARY_", pk}
-		}
-
-		if !fi.IsDir() {
-			return fmt.Errorf("%s is supposed to be a directory (corruption/bug?)", fi.Name())
-		}
-
-		blInfos, err := ioutil.ReadDir(entityBacklinksDir)
+	if priIdx, ok := man.primaryIndices[typeName]; ok {
+		err := priIdx.delete(pk)
 		if err != nil {
 			return err
-		}
-
-		for _, blInfo := range blInfos {
-			blPath := path.Join(entityBacklinksDir, blInfo.Name())
-			if err := isValidSymlink(blPath); err != nil {
-				return err
-			}
-
-			origPath, err := os.Readlink(blPath)
-			if err != nil {
-				return err
-			}
-
-			if err := os.Remove(blPath); err != nil {
-				return err
-			}
-
-			if err := os.Remove(origPath); err != nil {
-				return err
-			}
 		}
 	}
 
 	return nil
+
 }
 
 type diskMap struct {
