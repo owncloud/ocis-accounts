@@ -7,6 +7,26 @@ import (
 	"path"
 )
 
+// Unique ensures that only one document of the same type and key-value combination can exist in the index.
+//
+// Modeled by creating a index-folder per entity and key with symlinks which point to respective documents which contain
+// the link-filename as value.
+//
+// Directory Layout
+//
+// 		/var/data/index.disk/UserByEmail/
+// 		├── jacky@example.com -> /var/data/users/ewf4ofk-555
+// 		├── jones@example.com -> /var/data/users/rulan54-777
+// 		└── mikey@example.com -> /var/data/users/abcdefg-123
+//
+// Example user
+//
+// 		{
+//  		"Id": "ewf4ofk-555",
+//  		"UserName": "jacky",
+//  		"Email": "jacky@example.com"
+// 		}
+//
 type Unique struct {
 	indexBy      string
 	typeName     string

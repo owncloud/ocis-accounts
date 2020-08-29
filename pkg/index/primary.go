@@ -7,6 +7,15 @@ import (
 	"path"
 )
 
+// primary is created for each document-type to track existing primary-key id's and the indices referencing them.
+//
+// On disk a folder for each entity is created which contains symlinks to other index-symlinks pointing at this entity.
+// This allows for performant update and delete operations.
+//
+// 	/var/data/index.disk/UserPrimary/ewf4ofk-555/
+//	├── jacky -> /var/data/index.disk/UserByUserName/jacky
+//	└── jacky@example.com -> /var/data/index.disk/UserByEmail/jacky@example.com
+//
 type primary struct {
 	typeName string
 	indexDir string
