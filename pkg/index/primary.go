@@ -7,13 +7,13 @@ import (
 	"path"
 )
 
-type primaryIndex struct {
+type primary struct {
 	typeName string
 	indexDir string
 	dataPath string
 }
 
-func (idx primaryIndex) init() error {
+func (idx primary) init() error {
 	if err := os.MkdirAll(idx.indexDir, 0777); err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (idx primaryIndex) init() error {
 	return nil
 }
 
-func (idx primaryIndex) add(pk, v, createdPath string) error {
+func (idx primary) add(pk, v, createdPath string) error {
 	priIdxPath := path.Join(idx.indexDir, pk)
 	if err := os.MkdirAll(priIdxPath, 0777); err != nil {
 		return err
@@ -30,7 +30,7 @@ func (idx primaryIndex) add(pk, v, createdPath string) error {
 	return os.Symlink(createdPath, path.Join(priIdxPath, v))
 }
 
-func (idx primaryIndex) delete(pk string) error {
+func (idx primary) delete(pk string) error {
 	entityIdxPath := path.Join(idx.indexDir, pk)
 	fi, err := os.Stat(entityIdxPath)
 	if os.IsNotExist(err) {

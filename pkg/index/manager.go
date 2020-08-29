@@ -14,7 +14,7 @@ type Manager struct {
 	config         *ManagerConfig
 	indices        indexMap
 	typeToDir      map[string]diskMap
-	primaryIndices map[string]primaryIndex
+	primaryIndices map[string]primary
 }
 
 type ManagerConfig struct {
@@ -41,14 +41,14 @@ func NewManager(cfg *ManagerConfig) *Manager {
 		config:         cfg,
 		indices:        indexMap{},
 		typeToDir:      map[string]diskMap{},
-		primaryIndices: map[string]primaryIndex{},
+		primaryIndices: map[string]primary{},
 	}
 }
 
 func (man Manager) AddPrimaryIndex(typeName, entityDirName string) error {
 	fullDataPath := path.Join(man.config.DataDir, entityDirName)
 	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
-	man.primaryIndices[typeName] = primaryIndex{
+	man.primaryIndices[typeName] = primary{
 		typeName: typeName,
 		indexDir: path.Join(indexPath, fmt.Sprintf("%sPrimary", typeName)),
 		dataPath: fullDataPath,
