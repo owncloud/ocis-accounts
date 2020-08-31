@@ -103,8 +103,8 @@ func getUniqueIdxSut(t *testing.T) (sut Index, dataPath string) {
 	}
 
 	for _, u := range testData["users"] {
-		pkVal := getValueOf(u, "Id")
-		idxByVal := getValueOf(u, "Email")
+		pkVal := valueOf(u, "Id")
+		idxByVal := valueOf(u, "Email")
 		_, err := sut.Add(pkVal, idxByVal)
 		if err != nil {
 			t.Fatal(err)

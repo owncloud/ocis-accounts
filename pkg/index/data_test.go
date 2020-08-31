@@ -44,7 +44,7 @@ func writeIndexTestData(t *testing.T, m map[string][]interface{}, pk string) str
 				t.Fatal(err)
 			}
 
-			pkVal := getValueOf(u, pk)
+			pkVal := valueOf(u, pk)
 			if err := ioutil.WriteFile(path.Join(fileTypePath, pkVal), data, 0777); err != nil {
 				t.Fatal(err)
 			}

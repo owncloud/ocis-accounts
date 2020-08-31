@@ -33,7 +33,7 @@ func TestManagerQueryMultipleIndices(t *testing.T) {
 
 	for path := range testData {
 		for _, entity := range testData[path] {
-			err := man.Add(getValueOf(entity, "Id"), entity)
+			err := man.Add(valueOf(entity, "Id"), entity)
 			assert.NoError(t, err)
 		}
 	}
@@ -87,12 +87,12 @@ func TestManagerDelete(t *testing.T) {
 
 	for path := range testData {
 		for _, entity := range testData[path] {
-			err := man.Add(getValueOf(entity, "Id"), entity)
+			err := man.Add(valueOf(entity, "Id"), entity)
 			assert.NoError(t, err)
 		}
 	}
 
 	err = man.Delete("User", "hijklmn-456")
-	t.Log(err)
+	_ = os.RemoveAll(dataDir)
 
 }

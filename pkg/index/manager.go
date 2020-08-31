@@ -2,18 +2,15 @@
 package index
 
 import (
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"path"
-	"reflect"
 )
 
 // Manager is a facade to configure and query over multiple indices.
 type Manager struct {
 	config         *ManagerConfig
 	indices        indexMap
-	typeToDir      map[string]diskMap
 	primaryIndices map[string]primary
 }
 
@@ -40,7 +37,6 @@ func NewManager(cfg *ManagerConfig) *Manager {
 	return &Manager{
 		config:         cfg,
 		indices:        indexMap{},
-		typeToDir:      map[string]diskMap{},
 		primaryIndices: map[string]primary{},
 	}
 }
@@ -70,7 +66,6 @@ func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error
 
 func (man Manager) AddIndex(idx Index) error {
 	man.indices.addIndex(idx)
-
 	return idx.Init()
 }
 
@@ -84,28 +79,21 @@ func (man Manager) Add(primaryKey string, entity interface{}) error {
 	typeName := t.Type().Name()
 
 	if typeIndices, ok := man.indices[typeName]; ok {
-		for fieldName, fieldIndices := range typeIndices {
+		for _, fieldIndices := range typeIndices {
 			for k := range fieldIndices {
 				curIdx := fieldIndices[k]
 				idxBy := curIdx.IndexBy()
-				f := t.FieldByName(idxBy)
-				if f.IsZero() {
-					return fmt.Errorf("the indexBy-name of an index on %v does not exist", fieldName)
-				}
-
-				val := f.String()
+				val := valueOf(entity, idxBy)
 				created, err := curIdx.Add(primaryKey, val)
 				if err != nil {
 					return err
 				}
 
 				if priIdx, ok := man.primaryIndices[typeName]; ok {
-					err := priIdx.add(primaryKey, val, created)
-					if err != nil {
+					if err := priIdx.add(primaryKey, val, created); err != nil {
 						return err
 					}
 				}
-
 			}
 		}
 	}
@@ -138,49 +126,11 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 
 func (man Manager) Delete(typeName, pk string) error {
 	if priIdx, ok := man.primaryIndices[typeName]; ok {
-		err := priIdx.delete(pk)
-		if err != nil {
+		if err := priIdx.delete(pk); err != nil {
 			return err
 		}
 	}
 
 	return nil
 
-}
-
-type diskMap struct {
-	filesDirPath, backlinksDirPath string
-}
-
-// indexMap holds the index-configuration
-type indexMap map[tName]map[indexByKey][]Index
-type tName = string
-type indexByKey = string
-
-func (m indexMap) addIndex(idx Index) {
-	typeName, indexBy := idx.TypeName(), idx.IndexBy()
-	if _, ok := m[typeName]; !ok {
-		m[typeName] = map[indexByKey][]Index{}
-	}
-
-	m[typeName][indexBy] = append(m[typeName][indexBy], idx)
-}
-
-func getType(v interface{}) (reflect.Value, error) {
-	rv := reflect.ValueOf(v)
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
-		rv = rv.Elem()
-	}
-	if !rv.IsValid() {
-		return reflect.Value{}, errors.New("error while detecting entity type for index-update")
-	}
-
-	return rv, nil
-}
-
-func getValueOf(v interface{}, field string) string {
-	r := reflect.ValueOf(v)
-	f := reflect.Indirect(r).FieldByName(field)
-
-	return f.String()
 }
