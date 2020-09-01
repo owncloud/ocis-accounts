@@ -23,15 +23,13 @@ import (
 	settings "github.com/owncloud/ocis-settings/pkg/proto/v0"
 	settings_svc "github.com/owncloud/ocis-settings/pkg/service/v0"
 	"github.com/rs/zerolog"
-	"github.com/tredoe/osutil/user/crypt"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/protobuf/types/known/timestamppb"
+)
 
-	// register crypt functions
-	_ "github.com/tredoe/osutil/user/crypt/apr1_crypt"
-	_ "github.com/tredoe/osutil/user/crypt/md5_crypt"
-	_ "github.com/tredoe/osutil/user/crypt/sha256_crypt"
-	_ "github.com/tredoe/osutil/user/crypt/sha512_crypt"
+const (
+	bcryptCost = 12
 )
 
 // accLock mutually exclude readers from writers on account files
@@ -153,8 +151,8 @@ func (s Service) passwordIsValid(hash string, pwd string) (ok bool) {
 		}
 	}()
 
-	c := crypt.NewFromHash(hash)
-	return c.Verify(hash, []byte(pwd)) == nil
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(pwd))
+	return err == nil
 }
 
 func (s Service) hasAccountManagementPermissions(ctx context.Context) bool {
@@ -326,11 +324,12 @@ func (s Service) CreateAccount(ctx context.Context, in *proto.CreateAccountReque
 	if acc.PasswordProfile != nil {
 		if acc.PasswordProfile.Password != "" {
 			// encrypt password
-			c := crypt.New(crypt.SHA512)
-			if acc.PasswordProfile.Password, err = c.Generate([]byte(acc.PasswordProfile.Password), nil); err != nil {
+			hash, err := bcrypt.GenerateFromPassword([]byte(acc.PasswordProfile.Password), bcryptCost)
+			if err != nil {
 				s.log.Error().Err(err).Str("id", id).Msg("could not hash password")
 				return merrors.InternalServerError(s.id, "could not hash password: %v", err.Error())
 			}
+			acc.PasswordProfile.Password = string(hash)
 		}
 
 		if err := passwordPoliciesValid(acc.PasswordProfile.PasswordPolicies); err != nil {
@@ -429,13 +428,13 @@ func (s Service) UpdateAccount(ctx context.Context, in *proto.UpdateAccountReque
 		}
 		if in.Account.PasswordProfile.Password != "" {
 			// encrypt password
-			c := crypt.New(crypt.SHA512)
-			if out.PasswordProfile.Password, err = c.Generate([]byte(in.Account.PasswordProfile.Password), nil); err != nil {
+			hash, err := bcrypt.GenerateFromPassword([]byte(in.Account.PasswordProfile.Password), bcryptCost)
+			if err != nil {
 				in.Account.PasswordProfile.Password = ""
 				s.log.Error().Err(err).Str("id", id).Msg("could not hash password")
 				return merrors.InternalServerError(s.id, "could not hash password: %v", err.Error())
 			}
-
+			out.PasswordProfile.Password = string(hash)
 			in.Account.PasswordProfile.Password = ""
 		}
 
