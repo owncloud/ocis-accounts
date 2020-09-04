@@ -2,16 +2,14 @@
 package index
 
 import (
-	"fmt"
 	"github.com/rs/zerolog"
 	"path"
 )
 
 // Manager is a facade to configure and query over multiple indices.
 type Manager struct {
-	config         *ManagerConfig
-	indices        indexMap
-	primaryIndices map[string]primary
+	config  *ManagerConfig
+	indices indexMap
 }
 
 type ManagerConfig struct {
@@ -35,23 +33,9 @@ type Index interface {
 
 func NewManager(cfg *ManagerConfig) *Manager {
 	return &Manager{
-		config:         cfg,
-		indices:        indexMap{},
-		primaryIndices: map[string]primary{},
+		config:  cfg,
+		indices: indexMap{},
 	}
-}
-
-func (man Manager) AddPrimaryIndex(typeName, entityDirName string) error {
-	fullDataPath := path.Join(man.config.DataDir, entityDirName)
-	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
-	man.primaryIndices[typeName] = primary{
-		typeName: typeName,
-		indexDir: path.Join(indexPath, fmt.Sprintf("%sPrimary", typeName)),
-		dataPath: fullDataPath,
-	}
-
-	return man.primaryIndices[typeName].init()
-
 }
 
 func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error {
@@ -84,15 +68,9 @@ func (man Manager) Add(primaryKey string, entity interface{}) error {
 				curIdx := fieldIndices[k]
 				idxBy := curIdx.IndexBy()
 				val := valueOf(entity, idxBy)
-				created, err := curIdx.Add(primaryKey, val)
+				_, err := curIdx.Add(primaryKey, val)
 				if err != nil {
 					return err
-				}
-
-				if priIdx, ok := man.primaryIndices[typeName]; ok {
-					if err := priIdx.add(primaryKey, val, created); err != nil {
-						return err
-					}
 				}
 			}
 		}
@@ -126,12 +104,6 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 }
 
 func (man Manager) Delete(typeName, pk string) error {
-	if priIdx, ok := man.primaryIndices[typeName]; ok {
-		if err := priIdx.delete(pk); err != nil {
-			return err
-		}
-	}
-
 	return nil
 
 }
