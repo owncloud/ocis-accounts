@@ -1,13 +1,6 @@
 package index
 
-import (
-	"fmt"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
-)
-
+/*
 func TestManagerQueryMultipleIndices(t *testing.T) {
 	dataDir := writeIndexTestData(t, testData, "Id")
 	man := NewManager(&ManagerConfig{
@@ -96,3 +89,5 @@ func TestManagerDelete(t *testing.T) {
 	_ = os.RemoveAll(dataDir)
 
 }
+
+*/

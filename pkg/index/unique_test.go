@@ -15,7 +15,7 @@ func TestUniqueLookupSingleEntry(t *testing.T) {
 	resultPath, err := uniq.Lookup("mikey@example.com")
 	assert.NoError(t, err)
 
-	assert.Equal(t, path.Join(filesDir, "abcdefg-123"), resultPath)
+	assert.Equal(t, []string{path.Join(filesDir, "abcdefg-123")}, resultPath)
 
 	t.Log("non-existing lookup")
 	resultPath, err = uniq.Lookup("doesnotExists@example.com")
@@ -40,7 +40,7 @@ func TestUniqueUniqueConstraint(t *testing.T) {
 func TestUniqueRemove(t *testing.T) {
 	uniq, dataDir := getUniqueIdxSut(t)
 
-	err := uniq.Remove("mikey@example.com")
+	err := uniq.Remove("", "mikey@example.com")
 	assert.NoError(t, err)
 
 	_, err = uniq.Lookup("mikey@example.com")
@@ -54,16 +54,16 @@ func TestUniqueUpdate(t *testing.T) {
 	uniq, dataDir := getUniqueIdxSut(t)
 
 	t.Log("successful update")
-	err := uniq.Update("mikey@example.com", "mikey2@example.com")
+	err := uniq.Update("", "mikey@example.com", "mikey2@example.com")
 	assert.NoError(t, err)
 
 	t.Log("failed update because already exists")
-	err = uniq.Update("frank@example.com", "mikey2@example.com")
+	err = uniq.Update("", "frank@example.com", "mikey2@example.com")
 	assert.Error(t, err)
 	assert.IsType(t, &alreadyExistsErr{}, err)
 
 	t.Log("failed update because not found")
-	err = uniq.Update("notexist@example.com", "something2@example.com")
+	err = uniq.Update("", "notexist@example.com", "something2@example.com")
 	assert.Error(t, err)
 	assert.IsType(t, &notFoundErr{}, err)
 
@@ -84,7 +84,7 @@ func TestUniqueInit(t *testing.T) {
 
 	assert.NoError(t, uniq.Init(), "Init shouldn't return an error")
 	assert.DirExists(t, indexRootDir)
-	assert.DirExists(t, path.Join(indexRootDir, "UserByEmail"))
+	assert.DirExists(t, path.Join(indexRootDir, "UniqueUserByEmail"))
 
 	_ = os.RemoveAll(dataDir)
 }

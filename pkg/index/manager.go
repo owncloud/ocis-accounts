@@ -24,10 +24,10 @@ type ManagerConfig struct {
 // Each index implementation is bound to one data-column (IndexBy) and a data-type (TypeName)
 type Index interface {
 	Init() error
-	Lookup(v string) (string, error)
-	Add(pk, v string) (string, error)
-	Remove(v string) error
-	Update(oldV, newV string) error
+	Lookup(v string) ([]string, error)
+	Add(id, v string) (string, error)
+	Remove(id string, v string) error
+	Update(id, oldV, newV string) error
 	IndexBy() string
 	TypeName() string
 	FilesDir() string
@@ -105,9 +105,10 @@ func (man Manager) Add(primaryKey string, entity interface{}) error {
 //  // Find a User type by email
 //  man.Find("User", "Email", "foo@example.com")
 func (man Manager) Find(typeName, key, value string) (pk string, err error) {
+	var res = []string{}
 	if indices, ok := man.indices[typeName][key]; ok {
 		for _, idx := range indices {
-			if pk, err = idx.Lookup(value); IsNotFoundErr(err) {
+			if res, err = idx.Lookup(value); IsNotFoundErr(err) {
 				continue
 			}
 
@@ -117,11 +118,11 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 		}
 	}
 
-	if pk == "" {
-		return
+	if res[0] == "" {
+		return "", nil
 	}
 
-	return path.Base(pk), err
+	return path.Base(res[0]), err
 }
 
 func (man Manager) Delete(typeName, pk string) error {

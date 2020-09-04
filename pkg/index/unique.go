@@ -43,7 +43,7 @@ func NewUniqueIndex(typeName, indexBy, filesDir, indexBaseDir string) Unique {
 		typeName:     typeName,
 		filesDir:     filesDir,
 		indexBaseDir: indexBaseDir,
-		indexRootDir: path.Join(indexBaseDir, fmt.Sprintf("%sBy%s", typeName, indexBy)),
+		indexRootDir: path.Join(indexBaseDir, fmt.Sprintf("Unique%sBy%s", typeName, indexBy)),
 	}
 }
 
@@ -59,8 +59,8 @@ func (idx Unique) Init() error {
 	return nil
 }
 
-func (idx Unique) Add(pk, v string) (string, error) {
-	oldName := path.Join(idx.filesDir, pk)
+func (idx Unique) Add(id, v string) (string, error) {
+	oldName := path.Join(idx.filesDir, id)
 	newName := path.Join(idx.indexRootDir, v)
 	err := os.Symlink(oldName, newName)
 	if errors.Is(err, os.ErrExist) {
@@ -70,7 +70,7 @@ func (idx Unique) Add(pk, v string) (string, error) {
 	return newName, err
 }
 
-func (idx Unique) Remove(v string) (err error) {
+func (idx Unique) Remove(id string, v string) (err error) {
 	searchPath := path.Join(idx.indexRootDir, v)
 	if err = isValidSymlink(searchPath); err != nil {
 		return
@@ -79,7 +79,7 @@ func (idx Unique) Remove(v string) (err error) {
 	return os.Remove(searchPath)
 }
 
-func (idx Unique) Lookup(v string) (resultPath string, err error) {
+func (idx Unique) Lookup(v string) (resultPath []string, err error) {
 	searchPath := path.Join(idx.indexRootDir, v)
 	if err = isValidSymlink(searchPath); err != nil {
 		if os.IsNotExist(err) {
@@ -89,10 +89,16 @@ func (idx Unique) Lookup(v string) (resultPath string, err error) {
 		return
 	}
 
-	return os.Readlink(searchPath)
+	p, err := os.Readlink(searchPath)
+	if err != nil {
+		return []string{}, nil
+	}
+
+	return []string{p}, err
+
 }
 
-func (idx Unique) Update(oldV, newV string) (err error) {
+func (idx Unique) Update(id, oldV, newV string) (err error) {
 	oldPath := path.Join(idx.indexRootDir, oldV)
 	if err = isValidSymlink(oldPath); err != nil {
 		if os.IsNotExist(err) {
