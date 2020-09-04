@@ -48,6 +48,16 @@ func (man Manager) AddUniqueIndex(typeName, indexBy, entityDirName string) error
 	return idx.Init()
 }
 
+func (man Manager) AddNormalIndex(typeName, indexBy, entityDirName string) error {
+	fullDataPath := path.Join(man.config.DataDir, entityDirName)
+	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
+
+	idx := NewNormalIndex(typeName, indexBy, fullDataPath, indexPath)
+	man.indices.addIndex(idx)
+
+	return idx.Init()
+}
+
 func (man Manager) AddIndex(idx Index) error {
 	man.indices.addIndex(idx)
 	return idx.Init()
@@ -96,8 +106,8 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 		}
 	}
 
-	if res[0] == "" {
-		return "", nil
+	if len(res) == 0 {
+		return "", err
 	}
 
 	return path.Base(res[0]), err
@@ -105,5 +115,4 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 
 func (man Manager) Delete(typeName, pk string) error {
 	return nil
-
 }
