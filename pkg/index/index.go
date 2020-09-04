@@ -94,18 +94,52 @@ func (idx NormalIndex) Remove(id string, v string) error {
 	panic("implement me")
 }
 
-func (idx NormalIndex) Update(id, oldV, newV string) error {
-	panic("implement me")
+func (idx NormalIndex) Update(id, oldV, newV string) (err error) {
+	oldDir := path.Join(idx.indexRootDir, oldV)
+	oldPath := path.Join(oldDir, id)
+	newDir := path.Join(idx.indexRootDir, newV)
+	newPath := path.Join(newDir, id)
+
+	if _, err = os.Stat(oldPath); os.IsNotExist(err) {
+		return &notFoundErr{idx.typeName, idx.indexBy, oldV}
+	}
+
+	if err != nil {
+		return
+	}
+
+	if err = os.MkdirAll(newDir, 0777); err != nil {
+		return
+	}
+
+	if err = os.Rename(oldPath, newPath); err != nil {
+		return
+	}
+
+	di, err := ioutil.ReadDir(oldDir)
+	if err != nil {
+		return err
+	}
+
+	if len(di) == 0 {
+		err = os.RemoveAll(oldDir)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+
 }
 
 func (idx NormalIndex) IndexBy() string {
-	panic("implement me")
+	return idx.indexBy
 }
 
 func (idx NormalIndex) TypeName() string {
-	panic("implement me")
+	return idx.typeName
 }
 
 func (idx NormalIndex) FilesDir() string {
-	panic("implement me")
+	return idx.filesDir
 }

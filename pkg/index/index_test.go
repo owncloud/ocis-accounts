@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestIndex(t *testing.T) {
-	sut, _ := getNormalIdxSut(t)
+func TestIndexAdd(t *testing.T) {
+	sut, dataPath := getNormalIdxSut(t)
 
 	ids, err := sut.Lookup("Green")
 	assert.NoError(t, err)
@@ -22,6 +22,21 @@ func TestIndex(t *testing.T) {
 	assert.Error(t, err)
 	assert.EqualValues(t, []string{}, ids)
 
+	_ = os.RemoveAll(dataPath)
+
+}
+
+func TestIndexUpdate(t *testing.T) {
+	sut, dataPath := getNormalIdxSut(t)
+
+	err := sut.Update("goefe-789", "Green", "Black")
+	assert.NoError(t, err)
+
+	err = sut.Update("xadaf-189", "Green", "Black")
+	assert.NoError(t, err)
+
+	assert.DirExists(t, path.Join(dataPath, "index.disk/PetByColor/Black"))
+	assert.NoDirExists(t, path.Join(dataPath, "index.disk/PetByColor/Green"))
 }
 
 func TestIndexInit(t *testing.T) {
