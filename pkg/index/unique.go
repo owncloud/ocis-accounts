@@ -14,7 +14,7 @@ import (
 //
 // Directory Layout
 //
-// 		/var/data/index.disk/UserByEmail/
+// 		/var/data/index.disk/UniqueUserByEmail/
 // 		├── jacky@example.com -> /var/data/users/ewf4ofk-555
 // 		├── jones@example.com -> /var/data/users/rulan54-777
 // 		└── mikey@example.com -> /var/data/users/abcdefg-123

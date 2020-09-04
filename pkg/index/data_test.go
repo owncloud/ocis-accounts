@@ -27,6 +27,7 @@ var testData = map[string][]interface{}{
 		TestPet{Id: "rebef-123", Kind: "Dog", Color: "Brown", Name: "Waldo"},
 		TestPet{Id: "wefwe-456", Kind: "Cat", Color: "White", Name: "Snowy"},
 		TestPet{Id: "goefe-789", Kind: "Hog", Color: "Green", Name: "Dicky"},
+		TestPet{Id: "xadaf-189", Kind: "Hog", Color: "Green", Name: "Ricky"},
 	},
 }
 
