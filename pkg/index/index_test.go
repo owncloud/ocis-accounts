@@ -37,6 +37,17 @@ func TestIndexUpdate(t *testing.T) {
 
 	assert.DirExists(t, path.Join(dataPath, "index.disk/PetByColor/Black"))
 	assert.NoDirExists(t, path.Join(dataPath, "index.disk/PetByColor/Green"))
+
+	_ = os.RemoveAll(dataPath)
+}
+
+func TestNormalIndexDelete(t *testing.T) {
+	sut, dataPath := getNormalIdxSut(t)
+	assert.FileExists(t, path.Join(dataPath, "index.disk/PetByColor/Green/goefe-789"))
+	err := sut.Remove("goefe-789", "")
+	assert.NoError(t, err)
+	assert.NoFileExists(t, path.Join(dataPath, "index.disk/PetByColor/Green/goefe-789"))
+	_ = os.RemoveAll(dataPath)
 }
 
 func TestIndexInit(t *testing.T) {

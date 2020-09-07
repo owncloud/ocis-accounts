@@ -114,5 +114,6 @@ func (man Manager) Find(typeName, key, value string) (pk string, err error) {
 }
 
 func (man Manager) Delete(typeName, pk string) error {
+
 	return nil
 }

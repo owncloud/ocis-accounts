@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 // NormalIndex is able to index an document by a key which might contain non-unique values
@@ -91,7 +92,18 @@ func (idx NormalIndex) Add(id, v string) (string, error) {
 }
 
 func (idx NormalIndex) Remove(id string, v string) error {
-	panic("implement me")
+	res, err := filepath.Glob(path.Join(idx.indexRootDir, "/*/", id))
+	if err != nil {
+		return err
+	}
+
+	for _, p := range res {
+		if err := os.Remove(p); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (idx NormalIndex) Update(id, oldV, newV string) (err error) {
