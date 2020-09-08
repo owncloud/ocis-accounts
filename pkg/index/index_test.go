@@ -80,6 +80,10 @@ func TestNormalIndexSearch(t *testing.T) {
 	assert.Equal(t, "goefe-789", path.Base(res[0]))
 	assert.Equal(t, "xadaf-189", path.Base(res[1]))
 
+	res, err = sut.Search("does-not-exist@example.com")
+	assert.Error(t, err)
+	assert.IsType(t, &notFoundErr{}, err)
+
 	_ = os.RemoveAll(dataPath)
 }
 
