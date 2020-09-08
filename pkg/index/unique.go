@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 // Unique ensures that only one document of the same type and key-value combination can exist in the index.
@@ -118,6 +119,33 @@ func (idx Unique) Update(id, oldV, newV string) (err error) {
 	}
 
 	return
+}
+
+func (idx Unique) Search(pattern string) ([]string, error) {
+	paths, err := filepath.Glob(path.Join(idx.indexRootDir, pattern))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(paths) == 0 {
+		return nil, &notFoundErr{idx.typeName, idx.indexBy, pattern}
+	}
+
+	res := make([]string, 0, 0)
+	for _, p := range paths {
+		if err := isValidSymlink(p); err != nil {
+			return nil, err
+		}
+
+		src, err := os.Readlink(p)
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, src)
+	}
+
+	return res, nil
 }
 
 func (idx Unique) IndexBy() string {

@@ -144,6 +144,19 @@ func (idx NormalIndex) Update(id, oldV, newV string) (err error) {
 
 }
 
+func (idx NormalIndex) Search(pattern string) ([]string, error) {
+	paths, err := filepath.Glob(path.Join(idx.indexRootDir, pattern, "*"))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(paths) == 0 {
+		return nil, &notFoundErr{idx.typeName, idx.indexBy, pattern}
+	}
+
+	return paths, nil
+}
+
 func (idx NormalIndex) IndexBy() string {
 	return idx.indexBy
 }

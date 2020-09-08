@@ -26,6 +26,7 @@ type Index interface {
 	Add(id, v string) (string, error)
 	Remove(id string, v string) error
 	Update(id, oldV, newV string) error
+	Search(pattern string) ([]string, error)
 	IndexBy() string
 	TypeName() string
 	FilesDir() string

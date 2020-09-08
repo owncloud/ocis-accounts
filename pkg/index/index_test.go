@@ -69,6 +69,20 @@ func TestIndexInit(t *testing.T) {
 	_ = os.RemoveAll(dataDir)
 }
 
+func TestNormalIndexSearch(t *testing.T) {
+	sut, dataPath := getNormalIdxSut(t)
+
+	res, err := sut.Search("Gr*")
+
+	assert.NoError(t, err)
+	assert.Len(t, res, 2)
+
+	assert.Equal(t, "goefe-789", path.Base(res[0]))
+	assert.Equal(t, "xadaf-189", path.Base(res[1]))
+
+	_ = os.RemoveAll(dataPath)
+}
+
 func getNormalIdxSut(t *testing.T) (sut Index, dataPath string) {
 	dataPath = writeIndexTestData(t, testData, "Id")
 	sut = NewNormalIndex("Pet", "Color", path.Join(dataPath, "pets"), path.Join(dataPath, "index.disk"))

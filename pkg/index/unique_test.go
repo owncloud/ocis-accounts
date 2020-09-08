@@ -89,6 +89,20 @@ func TestUniqueInit(t *testing.T) {
 	_ = os.RemoveAll(dataDir)
 }
 
+func TestUniqueIndexSearch(t *testing.T) {
+	sut, dataPath := getUniqueIdxSut(t)
+
+	res, err := sut.Search("j*@example.com")
+
+	assert.NoError(t, err)
+	assert.Len(t, res, 2)
+
+	assert.Equal(t, "ewf4ofk-555", path.Base(res[0]))
+	assert.Equal(t, "rulan54-777", path.Base(res[1]))
+
+	_ = os.RemoveAll(dataPath)
+}
+
 func TestErrors(t *testing.T) {
 	assert.True(t, IsAlreadyExistsErr(&alreadyExistsErr{}))
 	assert.True(t, IsNotFoundErr(&notFoundErr{}))
