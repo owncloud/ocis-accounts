@@ -17,7 +17,6 @@ require (
 	github.com/owncloud/ocis v1.0.0-rc1 // indirect
 	github.com/owncloud/ocis-pkg/v2 v2.4.1-0.20200902134813-1e87c6173ada
 	github.com/owncloud/ocis-settings v0.3.2-0.20200903035407-ad5de8264f91
-	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/restic/calens v0.2.0
 	github.com/rs/zerolog v1.19.0
 	github.com/spf13/viper v1.7.0
