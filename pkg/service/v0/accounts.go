@@ -60,7 +60,7 @@ func (s Service) indexAccount(id string) error {
 	a := &proto.BleveAccount{
 		BleveType: "account",
 	}
-	if err := s.repo.LoadAccount(id, &a.Account); err != nil {
+	if err := s.repo.LoadAccount(id, nil, &a.Account); err != nil {
 		s.log.Error().Err(err).Str("account", id).Msg("could not load account")
 		return err
 	}
@@ -84,7 +84,7 @@ func (s Service) expandMemberOf(a *proto.Account) {
 	for i := range a.MemberOf {
 		g := &proto.Group{}
 		// TODO resolve by name, when a create or update is issued they may not have an id? fall back to searching the group id in the index?
-		if err := s.repo.LoadGroup(a.MemberOf[i].Id, g); err == nil {
+		if err := s.repo.LoadGroup(a.MemberOf[i].Id, nil, g); err == nil {
 			g.Members = nil // always hide members when expanding
 			expanded = append(expanded, g)
 		} else {
@@ -217,7 +217,7 @@ func (s Service) ListAccounts(ctx context.Context, in *proto.ListAccountsRequest
 
 	for _, hit := range searchResult.Hits {
 		a := &proto.Account{}
-		if err = s.repo.LoadAccount(hit.ID, a); err != nil {
+		if err = s.repo.LoadAccount(hit.ID, nil, a); err != nil {
 			s.log.Error().Err(err).Str("account", hit.ID).Msg("could not load account, skipping")
 			continue
 		}
@@ -265,7 +265,7 @@ func (s Service) GetAccount(ctx context.Context, in *proto.GetAccountRequest, ou
 		return merrors.InternalServerError(s.id, "could not clean up account id: %v", err.Error())
 	}
 
-	if err = s.repo.LoadAccount(id, out); err != nil {
+	if err = s.repo.LoadAccount(id, nil, out); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}
@@ -338,7 +338,7 @@ func (s Service) CreateAccount(ctx context.Context, in *proto.CreateAccountReque
 	// TODO groups should be ignored during create, use groups.AddMember? return error?
 
 	// write and index account - note: don't do anything else in between!
-	if err = s.repo.WriteAccount(acc); err != nil {
+	if err = s.repo.WriteAccount(nil, acc); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not persist new account")
 		s.debugLogAccount(acc).Msg("could not persist new account")
 		return
@@ -399,7 +399,7 @@ func (s Service) UpdateAccount(ctx context.Context, in *proto.UpdateAccountReque
 
 	path := filepath.Join(s.Config.Server.AccountsDataPath, "accounts", id)
 
-	if err = s.repo.LoadAccount(id, out); err != nil {
+	if err = s.repo.LoadAccount(id, nil, out); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}
@@ -453,7 +453,7 @@ func (s Service) UpdateAccount(ctx context.Context, in *proto.UpdateAccountReque
 		out.ExternalUserStateChangeDateTime = tsnow
 	}
 
-	if err = s.repo.WriteAccount(out); err != nil {
+	if err = s.repo.WriteAccount(nil, out); err != nil {
 		s.log.Error().Err(err).Str("id", out.Id).Msg("could not persist updated account")
 		return
 	}
@@ -505,7 +505,7 @@ func (s Service) DeleteAccount(ctx context.Context, in *proto.DeleteAccountReque
 	path := filepath.Join(s.Config.Server.AccountsDataPath, "accounts", id)
 
 	a := &proto.Account{}
-	if err = s.repo.LoadAccount(id, a); err != nil {
+	if err = s.repo.LoadAccount(id, nil, a); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}

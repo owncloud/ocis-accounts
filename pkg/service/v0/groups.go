@@ -43,7 +43,7 @@ func (s Service) indexGroup(id string) error {
 	g := &proto.BleveGroup{
 		BleveType: "group",
 	}
-	if err := s.repo.LoadGroup(id, &g.Group); err != nil {
+	if err := s.repo.LoadGroup(id, nil, &g.Group); err != nil {
 		s.log.Error().Err(err).Str("group", id).Msg("could not load group")
 		return err
 	}
@@ -63,7 +63,7 @@ func (s Service) expandMembers(g *proto.Group) {
 	for i := range g.Members {
 		// TODO resolve by name, when a create or update is issued they may not have an id? fall back to searching the group id in the index?
 		a := &proto.Account{}
-		if err := s.repo.LoadAccount(g.Members[i].Id, a); err == nil {
+		if err := s.repo.LoadAccount(g.Members[i].Id, nil, a); err == nil {
 			expanded = append(expanded, a)
 		} else {
 			// log errors but continue execution for now
@@ -116,7 +116,7 @@ func (s Service) ListGroups(c context.Context, in *proto.ListGroupsRequest, out 
 	for _, hit := range searchResult.Hits {
 
 		g := &proto.Group{}
-		if err = s.repo.LoadGroup(hit.ID, g); err != nil {
+		if err = s.repo.LoadGroup(hit.ID, nil, g); err != nil {
 			s.log.Error().Err(err).Str("group", hit.ID).Msg("could not load group, skipping")
 			continue
 		}
@@ -139,7 +139,7 @@ func (s Service) GetGroup(c context.Context, in *proto.GetGroupRequest, out *pro
 		return merrors.InternalServerError(s.id, "could not clean up group id: %v", err.Error())
 	}
 
-	if err = s.repo.LoadGroup(id, out); err != nil {
+	if err = s.repo.LoadGroup(id, nil, out); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load group")
 		return
 	}
@@ -166,7 +166,7 @@ func (s Service) CreateGroup(c context.Context, in *proto.CreateGroupRequest, ou
 		return merrors.InternalServerError(s.id, "could not clean up account id: %v", err.Error())
 	}
 
-	if err = s.repo.WriteGroup(in.Group); err != nil {
+	if err = s.repo.WriteGroup(in.Group, nil); err != nil {
 		s.log.Error().Err(err).Interface("group", in.Group).Msg("could not persist new group")
 		return
 	}
@@ -192,7 +192,7 @@ func (s Service) DeleteGroup(c context.Context, in *proto.DeleteGroupRequest, ou
 	path := filepath.Join(s.Config.Server.AccountsDataPath, "groups", id)
 
 	g := &proto.Group{}
-	if err = s.repo.LoadGroup(id, g); err != nil {
+	if err = s.repo.LoadGroup(id, nil, g); err != nil {
 		s.log.Error().Err(err).Str("id", id).Msg("could not load account")
 		return
 	}
@@ -237,13 +237,13 @@ func (s Service) AddMember(c context.Context, in *proto.AddMemberRequest, out *p
 
 	// load structs
 	a := &proto.Account{}
-	if err = s.repo.LoadAccount(accountID, a); err != nil {
+	if err = s.repo.LoadAccount(accountID, nil, a); err != nil {
 		s.log.Error().Err(err).Str("id", accountID).Msg("could not load account")
 		return
 	}
 
 	g := &proto.Group{}
-	if err = s.repo.LoadGroup(groupID, g); err != nil {
+	if err = s.repo.LoadGroup(groupID, nil, g); err != nil {
 		s.log.Error().Err(err).Str("id", groupID).Msg("could not load group")
 		return
 	}
@@ -271,11 +271,11 @@ func (s Service) AddMember(c context.Context, in *proto.AddMemberRequest, out *p
 		a.MemberOf = append(a.MemberOf, g)
 	}
 
-	if err = s.repo.WriteAccount(a); err != nil {
+	if err = s.repo.WriteAccount(nil, a); err != nil {
 		s.log.Error().Err(err).Interface("account", a).Msg("could not persist account")
 		return
 	}
-	if err = s.repo.WriteGroup(g); err != nil {
+	if err = s.repo.WriteGroup(g, nil); err != nil {
 		s.log.Error().Err(err).Interface("group", g).Msg("could not persist group")
 		return
 	}
@@ -302,13 +302,13 @@ func (s Service) RemoveMember(c context.Context, in *proto.RemoveMemberRequest, 
 
 	// load structs
 	a := &proto.Account{}
-	if err = s.repo.LoadAccount(accountID, a); err != nil {
+	if err = s.repo.LoadAccount(accountID, nil, a); err != nil {
 		s.log.Error().Err(err).Str("id", accountID).Msg("could not load account")
 		return
 	}
 
 	g := &proto.Group{}
-	if err = s.repo.LoadGroup(groupID, g); err != nil {
+	if err = s.repo.LoadGroup(groupID, nil, g); err != nil {
 		s.log.Error().Err(err).Str("id", groupID).Msg("could not load group")
 		return
 	}
@@ -331,11 +331,11 @@ func (s Service) RemoveMember(c context.Context, in *proto.RemoveMemberRequest, 
 	}
 	a.MemberOf = newGroups
 
-	if err = s.repo.WriteAccount(a); err != nil {
+	if err = s.repo.WriteAccount(nil, a); err != nil {
 		s.log.Error().Err(err).Interface("account", a).Msg("could not persist account")
 		return
 	}
-	if err = s.repo.WriteGroup(g); err != nil {
+	if err = s.repo.WriteGroup(g, nil); err != nil {
 		s.log.Error().Err(err).Interface("group", g).Msg("could not persist group")
 		return
 	}
@@ -355,7 +355,7 @@ func (s Service) ListMembers(c context.Context, in *proto.ListMembersRequest, ou
 	}
 
 	g := &proto.Group{}
-	if err = s.repo.LoadGroup(groupID, g); err != nil {
+	if err = s.repo.LoadGroup(groupID, nil, g); err != nil {
 		s.log.Error().Err(err).Str("id", groupID).Msg("could not load group")
 		return
 	}

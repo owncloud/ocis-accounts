@@ -452,7 +452,7 @@ type Service struct {
 	index       bleve.Index
 	RoleService settings.RoleService
 	RoleManager *roles.Manager
-	repo   storage.Repo
+	repo        storage.DiskRepo
 }
 
 func cleanupID(id string) (string, error) {
