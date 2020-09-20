@@ -1,108 +1,89 @@
 package index
 
 import (
+	"fmt"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"os"
-	"path"
 	"testing"
 )
 
-func TestIndexAdd(t *testing.T) {
-	sut, dataPath := getNormalIdxSut(t)
+func TestManagerQueryMultipleIndices(t *testing.T) {
+	dataDir := writeIndexTestData(t, testData, "Id")
+	man := NewIndex(&Config{
+		DataDir:          dataDir,
+		IndexRootDirName: "index.disk",
+		Log:              zerolog.Logger{},
+	})
 
-	ids, err := sut.Lookup("Green")
-	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"goefe-789", "xadaf-189"}, ids)
-
-	ids, err = sut.Lookup("White")
-	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"wefwe-456"}, ids)
-
-	ids, err = sut.Lookup("Cyan")
-	assert.Error(t, err)
-	assert.EqualValues(t, []string{}, ids)
-
-	_ = os.RemoveAll(dataPath)
-
-}
-
-func TestIndexUpdate(t *testing.T) {
-	sut, dataPath := getNormalIdxSut(t)
-
-	err := sut.Update("goefe-789", "Green", "Black")
+	err := man.AddUniqueIndex("User", "Email", "users")
 	assert.NoError(t, err)
 
-	err = sut.Update("xadaf-189", "Green", "Black")
+	err = man.AddUniqueIndex("User", "UserName", "users")
 	assert.NoError(t, err)
 
-	assert.DirExists(t, path.Join(dataPath, "index.disk/PetByColor/Black"))
-	assert.NoDirExists(t, path.Join(dataPath, "index.disk/PetByColor/Green"))
-
-	_ = os.RemoveAll(dataPath)
-}
-
-func TestNormalIndexDelete(t *testing.T) {
-	sut, dataPath := getNormalIdxSut(t)
-	assert.FileExists(t, path.Join(dataPath, "index.disk/PetByColor/Green/goefe-789"))
-	err := sut.Remove("goefe-789", "")
+	err = man.AddNormalIndex("TestPet", "Color", "pets")
 	assert.NoError(t, err)
-	assert.NoFileExists(t, path.Join(dataPath, "index.disk/PetByColor/Green/goefe-789"))
-	_ = os.RemoveAll(dataPath)
-}
 
-func TestIndexInit(t *testing.T) {
-	dataDir := createTmpDir(t)
-	indexRootDir := path.Join(dataDir, "index.disk")
-	filesDir := path.Join(dataDir, "users")
+	err = man.AddUniqueIndex("TestPet", "Name", "pets")
+	assert.NoError(t, err)
 
-	uniq := NewNormalIndex("User", "DisplayName", filesDir, indexRootDir)
-	assert.Error(t, uniq.Init(), "Init should return an error about missing files-dir")
-
-	if err := os.Mkdir(filesDir, 0777); err != nil {
-		t.Fatalf("Could not create test data-dir %s", err)
+	for path := range testData {
+		for _, entity := range testData[path] {
+			err := man.Add(valueOf(entity, "Id"), entity)
+			assert.NoError(t, err)
+		}
 	}
 
-	assert.NoError(t, uniq.Init(), "Init shouldn't return an error")
-	assert.DirExists(t, indexRootDir)
-	assert.DirExists(t, path.Join(indexRootDir, "UserByDisplayName"))
+	type test struct {
+		typeName, key, value, wantRes string
+		wantErr                       error
+	}
+
+	tests := []test{
+		{typeName: "User", key: "Email", value: "jacky@example.com", wantRes: "ewf4ofk-555"},
+		{typeName: "User", key: "UserName", value: "jacky", wantRes: "ewf4ofk-555"},
+		{typeName: "TestPet", key: "Color", value: "Brown", wantRes: "rebef-123"},
+		{typeName: "TestPet", key: "Color", value: "Cyan", wantRes: "", wantErr: &notFoundErr{}},
+	}
+
+	for _, tc := range tests {
+		name := fmt.Sprintf("Query%sBy%s=%s", tc.typeName, tc.key, tc.value)
+		t.Run(name, func(t *testing.T) {
+			pk, err := man.Find(tc.typeName, tc.key, tc.value)
+			assert.Equal(t, tc.wantRes, pk)
+			assert.IsType(t, tc.wantErr, err)
+		})
+	}
 
 	_ = os.RemoveAll(dataDir)
 }
 
-func TestNormalIndexSearch(t *testing.T) {
-	sut, dataPath := getNormalIdxSut(t)
+func TestManagerDelete(t *testing.T) {
+	dataDir := writeIndexTestData(t, testData, "Id")
+	man := NewIndex(&Config{
+		DataDir:          dataDir,
+		IndexRootDirName: "index.disk",
+		Log:              zerolog.Logger{},
+	})
 
-	res, err := sut.Search("Gr*")
-
+	err := man.AddUniqueIndex("User", "Email", "users")
 	assert.NoError(t, err)
-	assert.Len(t, res, 2)
 
-	assert.Equal(t, "goefe-789", path.Base(res[0]))
-	assert.Equal(t, "xadaf-189", path.Base(res[1]))
+	err = man.AddUniqueIndex("User", "UserName", "users")
+	assert.NoError(t, err)
 
-	res, err = sut.Search("does-not-exist@example.com")
-	assert.Error(t, err)
-	assert.IsType(t, &notFoundErr{}, err)
+	err = man.AddUniqueIndex("TestPet", "Name", "pets")
+	assert.NoError(t, err)
 
-	_ = os.RemoveAll(dataPath)
-}
-
-func getNormalIdxSut(t *testing.T) (sut Index, dataPath string) {
-	dataPath = writeIndexTestData(t, testData, "Id")
-	sut = NewNormalIndex("Pet", "Color", path.Join(dataPath, "pets"), path.Join(dataPath, "index.disk"))
-	err := sut.Init()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, u := range testData["pets"] {
-		pkVal := valueOf(u, "Id")
-		idxByVal := valueOf(u, "Color")
-		_, err := sut.Add(pkVal, idxByVal)
-		if err != nil {
-			t.Fatal(err)
+	for path := range testData {
+		for _, entity := range testData[path] {
+			err := man.Add(valueOf(entity, "Id"), entity)
+			assert.NoError(t, err)
 		}
 	}
 
-	return
+	err = man.Delete("User", "hijklmn-456")
+	_ = os.RemoveAll(dataDir)
+
 }

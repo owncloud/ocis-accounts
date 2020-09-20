@@ -1,170 +1,120 @@
+// Package index provides symlink-based index for on-disk document-directories.
 package index
 
 import (
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"os"
+	"github.com/rs/zerolog"
 	"path"
-	"path/filepath"
 )
 
-// NormalIndex is able to index an document by a key which might contain non-unique values
-//
-// /var/tmp/testfiles-395764020/index.disk/PetByColor/
-// ├── Brown
-// │   └── rebef-123 -> /var/tmp/testfiles-395764020/pets/rebef-123
-// ├── Green
-// │    ├── goefe-789 -> /var/tmp/testfiles-395764020/pets/goefe-789
-// │    └── xadaf-189 -> /var/tmp/testfiles-395764020/pets/xadaf-189
-// └── White
-//     └── wefwe-456 -> /var/tmp/testfiles-395764020/pets/wefwe-456
-type NormalIndex struct {
-	indexBy      string
-	typeName     string
-	filesDir     string
-	indexBaseDir string
-	indexRootDir string
+// Index is a facade to configure and query over multiple indices.
+type Index struct {
+	config  *Config
+	indices indexMap
 }
 
-// NewNormalIndex instantiates a new NormalIndex instance. Init() should be
-// called afterward to ensure correct on-disk structure.
-func NewNormalIndex(typeName, indexBy, filesDir, indexBaseDir string) NormalIndex {
-	return NormalIndex{
-		indexBy:      indexBy,
-		typeName:     typeName,
-		filesDir:     filesDir,
-		indexBaseDir: indexBaseDir,
-		indexRootDir: path.Join(indexBaseDir, fmt.Sprintf("%sBy%s", typeName, indexBy)),
+type Config struct {
+	DataDir          string
+	IndexRootDirName string
+	Log              zerolog.Logger
+}
+
+// Type can be implemented to create new index-strategies. See Unique for example.
+// Each index implementation is bound to one data-column (IndexBy) and a data-type (TypeName)
+type Type interface {
+	Init() error
+	Lookup(v string) ([]string, error)
+	Add(id, v string) (string, error)
+	Remove(id string, v string) error
+	Update(id, oldV, newV string) error
+	Search(pattern string) ([]string, error)
+	IndexBy() string
+	TypeName() string
+	FilesDir() string
+}
+
+func NewIndex(cfg *Config) *Index {
+	return &Index{
+		config:  cfg,
+		indices: indexMap{},
 	}
 }
 
-func (idx NormalIndex) Init() error {
-	if _, err := os.Stat(idx.filesDir); err != nil {
+func (man Index) AddUniqueIndex(typeName, indexBy, entityDirName string) error {
+	fullDataPath := path.Join(man.config.DataDir, entityDirName)
+	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
+
+	idx := NewUniqueIndex(typeName, indexBy, fullDataPath, indexPath)
+	man.indices.addIndex(idx)
+
+	return idx.Init()
+}
+
+func (man Index) AddNormalIndex(typeName, indexBy, entityDirName string) error {
+	fullDataPath := path.Join(man.config.DataDir, entityDirName)
+	indexPath := path.Join(man.config.DataDir, man.config.IndexRootDirName)
+
+	idx := NewNormalIndex(typeName, indexBy, fullDataPath, indexPath)
+	man.indices.addIndex(idx)
+
+	return idx.Init()
+}
+
+func (man Index) AddIndex(idx Type) error {
+	man.indices.addIndex(idx)
+	return idx.Init()
+}
+
+// Add a new entry to the index
+func (man Index) Add(primaryKey string, entity interface{}) error {
+	t, err := getType(entity)
+	if err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(idx.indexRootDir, 0777); err != nil {
-		return err
+	typeName := t.Type().Name()
+
+	if typeIndices, ok := man.indices[typeName]; ok {
+		for _, fieldIndices := range typeIndices {
+			for k := range fieldIndices {
+				curIdx := fieldIndices[k]
+				idxBy := curIdx.IndexBy()
+				val := valueOf(entity, idxBy)
+				_, err := curIdx.Add(primaryKey, val)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	return nil
 }
 
-func (idx NormalIndex) Lookup(v string) ([]string, error) {
-	searchPath := path.Join(idx.indexRootDir, v)
-	fi, err := ioutil.ReadDir(searchPath)
-	if os.IsNotExist(err) {
-		return []string{}, &notFoundErr{idx.typeName, idx.indexBy, v}
+// Find a entry by type,field and value.
+//  // Find a User type by email
+//  man.Find("User", "Email", "foo@example.com")
+func (man Index) Find(typeName, key, value string) (pk string, err error) {
+	var res = []string{}
+	if indices, ok := man.indices[typeName][key]; ok {
+		for _, idx := range indices {
+			if res, err = idx.Lookup(value); IsNotFoundErr(err) {
+				continue
+			}
+
+			if err != nil {
+				return
+			}
+		}
 	}
 
-	if err != nil {
-		return []string{}, err
-	}
-
-	var ids []string = nil
-	for _, f := range fi {
-		ids = append(ids, f.Name())
-	}
-
-	if len(ids) == 0 {
-		return []string{}, &notFoundErr{idx.typeName, idx.indexBy, v}
-	}
-
-	return ids, nil
-}
-
-func (idx NormalIndex) Add(id, v string) (string, error) {
-	oldName := path.Join(idx.filesDir, id)
-	newName := path.Join(idx.indexRootDir, v, id)
-
-	if err := os.MkdirAll(path.Join(idx.indexRootDir, v), 0777); err != nil {
+	if len(res) == 0 {
 		return "", err
 	}
 
-	err := os.Symlink(oldName, newName)
-	if errors.Is(err, os.ErrExist) {
-		return "", &alreadyExistsErr{idx.typeName, idx.indexBy, v}
-	}
-
-	return newName, err
-
+	return path.Base(res[0]), err
 }
 
-func (idx NormalIndex) Remove(id string, v string) error {
-	res, err := filepath.Glob(path.Join(idx.indexRootDir, "/*/", id))
-	if err != nil {
-		return err
-	}
-
-	for _, p := range res {
-		if err := os.Remove(p); err != nil {
-			return err
-		}
-	}
+func (man Index) Delete(typeName, pk string) error {
 
 	return nil
-}
-
-func (idx NormalIndex) Update(id, oldV, newV string) (err error) {
-	oldDir := path.Join(idx.indexRootDir, oldV)
-	oldPath := path.Join(oldDir, id)
-	newDir := path.Join(idx.indexRootDir, newV)
-	newPath := path.Join(newDir, id)
-
-	if _, err = os.Stat(oldPath); os.IsNotExist(err) {
-		return &notFoundErr{idx.typeName, idx.indexBy, oldV}
-	}
-
-	if err != nil {
-		return
-	}
-
-	if err = os.MkdirAll(newDir, 0777); err != nil {
-		return
-	}
-
-	if err = os.Rename(oldPath, newPath); err != nil {
-		return
-	}
-
-	di, err := ioutil.ReadDir(oldDir)
-	if err != nil {
-		return err
-	}
-
-	if len(di) == 0 {
-		err = os.RemoveAll(oldDir)
-		if err != nil {
-			return
-		}
-	}
-
-	return
-
-}
-
-func (idx NormalIndex) Search(pattern string) ([]string, error) {
-	paths, err := filepath.Glob(path.Join(idx.indexRootDir, pattern, "*"))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(paths) == 0 {
-		return nil, &notFoundErr{idx.typeName, idx.indexBy, pattern}
-	}
-
-	return paths, nil
-}
-
-func (idx NormalIndex) IndexBy() string {
-	return idx.indexBy
-}
-
-func (idx NormalIndex) TypeName() string {
-	return idx.typeName
-}
-
-func (idx NormalIndex) FilesDir() string {
-	return idx.filesDir
 }
