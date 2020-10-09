@@ -193,12 +193,8 @@ func (s Service) hasAccountManagementPermissions(ctx context.Context) bool {
 	// get roles from context
 	roleIDs, ok := roles.ReadRoleIDsFromContext(ctx)
 	if !ok {
-		/**
-		 * FIXME: with this we are skipping permission checks on all requests that are coming in without roleIDs in the
-		 * metadata context. This is a huge security impairment, as that's the case not only for grpc requests but also
-		 * for unauthenticated http requests and http requests coming in without hitting the ocis-proxy first.
-		 */
-		return true
+		// if roleIDs can't be found or are malformed in the context, we cannot check permissions. abort the request.
+		return false
 	}
 
 	// check if permission is present in roles of the authenticated account
@@ -208,7 +204,7 @@ func (s Service) hasAccountManagementPermissions(ctx context.Context) bool {
 // ListAccounts implements the AccountsServiceHandler interface
 // the query contains account properties
 func (s Service) ListAccounts(ctx context.Context, in *proto.ListAccountsRequest, out *proto.ListAccountsResponse) (err error) {
-	if !s.hasAccountManagementPermissions(ctx) {
+	if len(in.Query) == 0 && !s.hasAccountManagementPermissions(ctx) {
 		return merrors.Forbidden(s.id, "no permission for ListAccounts")
 	}
 
@@ -302,10 +298,6 @@ func (s Service) ListAccounts(ctx context.Context, in *proto.ListAccountsRequest
 
 // GetAccount implements the AccountsServiceHandler interface
 func (s Service) GetAccount(ctx context.Context, in *proto.GetAccountRequest, out *proto.Account) (err error) {
-	if !s.hasAccountManagementPermissions(ctx) {
-		return merrors.Forbidden(s.id, "no permission for GetAccount")
-	}
-
 	accLock.Lock()
 	defer accLock.Unlock()
 	var id string
